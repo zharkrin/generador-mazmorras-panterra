@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mazmorra - Generador</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            text-align: center;
+            font-family: sans-serif;
+        }
+        .fondo {
+            width: 100%;
+            max-width: 90vw;
+            height: auto;
+            margin-top: 20px;
+            border: 3px solid #555;
+            border-radius: 10px;
+        }
+        .botones {
+            margin: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color:white">🌌 Generador de Mazmorras de Panterra</h1>
+    <div>
+        <img class="fondo" src="{{ url_for('static', filename=fondo) }}" alt="Mazmorra">
+    </div>
+    <div class="botones">
+        <form method="get" action="/">
+            <button type="submit">🔄 Nuevo Bioma</button>
+        </form>
+    </div>
+</body>
+</html>
