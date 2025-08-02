@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nivel {{ numero }} / {{ total }}</title>
+    <style>
+        body {
+            margin: 0;
+            background: url("/static/fondos/{{ bioma }}.png") no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+        }
+        .ui {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: white;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            background: #444;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <form action="{{ url_for('anterior_nivel') }}" method="get">
+            <button type="submit">⬅ Nivel anterior</button>
+        </form>
+        <span>Nivel {{ numero }} de {{ total }}</span>
+        <form action="{{ url_for('siguiente_nivel') }}" method="get">
+            <button type="submit">Nivel siguiente ➡</button>
+        </form>
+        <form action="{{ url_for('reiniciar') }}" method="get">
+            <button type="submit">🔄 Nueva mazmorra</button>
+        </form>
+    </div>
+</body>
+</html>
