@@ -17,6 +17,7 @@
             background-image: url("/static/biomas/{{ bioma }}.png");
             background-size: cover;
             background-position: center;
+            position: relative;
         }
 
         .ui {
@@ -39,13 +40,68 @@
             color: white;
         }
 
-        .elementos h3 {
-            margin: 0 0 5px 0;
+        .especial {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 10px 20px;
+            border: 2px solid gold;
+            border-radius: 10px;
+            font-size: 18px;
+        }
+
+        a.boton {
+            display: inline-block;
+            padding: 8px 12px;
+            margin-top: 10px;
+            background: darkred;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .circulo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, cyan, blue);
+            border: 2px solid white;
+            border-radius: 50%;
+            animation: pulso 2s infinite;
+        }
+
+        @keyframes pulso {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="mazmorra"></div>
+    <div class="mazmorra">
+
+        {% if es_jefe %}
+        <div class="especial">
+            {% if jefe_derrotado %}
+                🗡️ Jefe derrotado.
+            {% else %}
+                ⚔️ ¡Sala de Jefe!
+                <br>
+                <a class="boton" href="{{ url_for('derrotar_jefe', nivel=numero - 1) }}">Derrotar Jefe</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if mostrar_circulo %}
+        <div class="circulo" title="Círculo de teletransporte"></div>
+        {% endif %}
+
+    </div>
 
     <div class="ui">
         <p>Nivel {{ numero }} / {{ total }}</p>
