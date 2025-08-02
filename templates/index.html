@@ -2,79 +2,28 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Generador de Mazmorras</title>
-    <style>
-        body {
-            background-color: #111;
-            color: white;
-            font-family: 'Segoe UI', sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
-        .btn {
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            margin: 10px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .btn:hover {
-            background-color: #555;
-        }
-        #mapa {
-            margin-top: 20px;
-            background-color: white;
-            display: inline-block;
-            padding: 20px;
-        }
-    </style>
+    <title>Mazmorra de Biomas</title>
 </head>
 <body>
-    <h1>🧭 Generador de Mazmorras</h1>
-    <button class="btn" onclick="generarMazmorra()">Generar Mazmorra</button>
-    <input type="number" id="nivel" min="1" max="100" value="1" class="btn" style="width: 80px;">
-    <br>
-    <input type="file" id="archivoJSON" accept=".json" style="margin-top: 20px; color: white;">
-    <button class="btn" onclick="cargarDesdeJSON()">Cargar desde JSON</button>
-
-    <div id="mapa"></div>
+    <h1>Niveles de la Mazmorra</h1>
+    <ul id="lista-niveles"></ul>
 
     <script>
-        let svgTexto = '';
-        let datosJSON = {};
-
-        function generarMazmorra() {
-            const nivel = document.getElementById("nivel").value;
-            fetch(`/generar?nivel=${nivel}`)
-                .then(res => res.json())
-                .then(data => {
-                    svgTexto = data.svg;
-                    datosJSON = data.json;
-                    document.getElementById("mapa").innerHTML = svgTexto;
-                });
-        }
-
-        function cargarDesdeJSON() {
-            const input = document.getElementById('archivoJSON');
-            if (!input.files[0]) return alert("Selecciona un archivo JSON primero.");
-
-            const formData = new FormData();
-            formData.append('archivo', input.files[0]);
-
-            fetch('/cargar', {
-                method: 'POST',
-                body: formData
-            })
+        fetch("/mazmorra")
             .then(res => res.json())
             .then(data => {
-                svgTexto = data.svg;
-                datosJSON = data.json;
-                document.getElementById('mapa').innerHTML = svgTexto;
+                const lista = document.getElementById("lista-niveles");
+                data.forEach(nivel => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `<strong>Nivel ${nivel.numero}:</strong> ${nivel.bioma}`;
+
+                    nivel.elementos.forEach(e => {
+                        li.innerHTML += `<br>— ${e.tipo.toUpperCase()}: ${e.nombre}`;
+                    });
+
+                    lista.appendChild(li);
+                });
             });
-        }
     </script>
 </body>
 </html>
