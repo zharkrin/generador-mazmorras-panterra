@@ -5,73 +5,75 @@
     <title>Generador de Mazmorras</title>
     <style>
         body {
-            background: #1e1e1e;
+            background-color: #111;
             color: white;
-            font-family: sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             text-align: center;
-            padding: 30px;
-        }
-        #mapa {
-            background: #2c2c2c;
-            margin: 20px auto;
-            border: 2px solid #444;
+            margin: 0;
+            padding: 20px;
         }
         .btn {
-            background: #444;
+            background-color: #333;
             color: white;
             padding: 10px 20px;
-            margin: 10px;
             border: none;
+            margin: 10px;
             cursor: pointer;
+            font-size: 16px;
         }
         .btn:hover {
-            background: #666;
+            background-color: #555;
+        }
+        #mapa {
+            margin-top: 20px;
+            background-color: white;
+            display: inline-block;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Generador de Mazmorras</h1>
-    <div>
-        <button class="btn" onclick="generarMazmorra()">Generar</button>
-        <button class="btn" onclick="descargarJSON()">Descargar JSON</button>
-        <button class="btn" onclick="descargarSVG()">Descargar SVG</button>
-    </div>
+    <h1>🧭 Generador de Mazmorras</h1>
+    <button class="btn" onclick="generarMazmorra()">Generar Mazmorra</button>
+    <input type="number" id="nivel" min="1" max="100" value="1" class="btn" style="width: 80px;">
+    <br>
+    <input type="file" id="archivoJSON" accept=".json" style="margin-top: 20px; color: white;">
+    <button class="btn" onclick="cargarDesdeJSON()">Cargar desde JSON</button>
+
     <div id="mapa"></div>
 
     <script>
-        let datosJSON = null;
-        let svgTexto = "";
+        let svgTexto = '';
+        let datosJSON = {};
 
         function generarMazmorra() {
-            fetch('/generar?nivel=1')
+            const nivel = document.getElementById("nivel").value;
+            fetch(`/generar?nivel=${nivel}`)
                 .then(res => res.json())
                 .then(data => {
                     svgTexto = data.svg;
                     datosJSON = data.json;
-                    document.getElementById('mapa').innerHTML = svgTexto;
+                    document.getElementById("mapa").innerHTML = svgTexto;
                 });
         }
 
-        function descargarJSON() {
-            if (!datosJSON) return alert("Genera primero una mazmorra.");
-            const blob = new Blob([JSON.stringify(datosJSON, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'mazmorra.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+        function cargarDesdeJSON() {
+            const input = document.getElementById('archivoJSON');
+            if (!input.files[0]) return alert("Selecciona un archivo JSON primero.");
 
-        function descargarSVG() {
-            if (!svgTexto) return alert("Genera primero una mazmorra.");
-            const blob = new Blob([svgTexto], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'mazmorra.svg';
-            a.click();
-            URL.revokeObjectURL(url);
+            const formData = new FormData();
+            formData.append('archivo', input.files[0]);
+
+            fetch('/cargar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                svgTexto = data.svg;
+                datosJSON = data.json;
+                document.getElementById('mapa').innerHTML = svgTexto;
+            });
         }
     </script>
 </body>
