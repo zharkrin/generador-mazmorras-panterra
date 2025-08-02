@@ -2,19 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mazmorra - Generador</title>
+    <title>Nivel {{ nivel }} - Mazmorra</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
             background-color: #000;
             text-align: center;
+            color: white;
             font-family: sans-serif;
         }
         .fondo {
             width: 100%;
             max-width: 90vw;
-            height: auto;
             margin-top: 20px;
             border: 3px solid #555;
             border-radius: 10px;
@@ -26,19 +24,32 @@
             padding: 10px 20px;
             margin: 5px;
             font-size: 1rem;
-            cursor: pointer;
+        }
+        .nivel {
+            margin-top: 10px;
+            font-size: 1.5rem;
+        }
+        .reinicio {
+            margin-top: 20px;
+            color: #aaa;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <h1 style="color:white">🌌 Generador de Mazmorras de Panterra</h1>
-    <div>
-        <img class="fondo" src="{{ url_for('static', filename=fondo) }}" alt="Mazmorra">
-    </div>
+    <h1>🌌 Mazmorra de Panterra</h1>
+    <div class="nivel">Nivel actual: {{ nivel }}</div>
+    <img class="fondo" src="{{ url_for('static', filename=fondo) }}" alt="Mazmorra">
+    
     <div class="botones">
-        <form method="get" action="/">
-            <button type="submit">🔄 Nuevo Bioma</button>
+        <form method="post">
+            <button type="submit" name="bajar">⬅️ Nivel anterior</button>
+            <button type="submit" name="subir">➡️ Nivel siguiente</button>
         </form>
+    </div>
+
+    <div class="reinicio">
+        <a href="{{ url_for('reiniciar') }}" style="color: #ccc;">🔄 Reiniciar todo</a>
     </div>
 </body>
 </html>
