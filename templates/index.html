@@ -2,57 +2,77 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mazmorra - Nivel {{ nivel }}</title>
+    <title>Generador de Mazmorras</title>
     <style>
         body {
-            background-color: #000;
-            color: #fff;
-            text-align: center;
+            background: #1e1e1e;
+            color: white;
             font-family: sans-serif;
+            text-align: center;
+            padding: 30px;
         }
-        .nivel {
-            font-size: 1.5rem;
-            margin: 10px;
+        #mapa {
+            background: #2c2c2c;
+            margin: 20px auto;
+            border: 2px solid #444;
         }
-        .botones {
-            margin: 10px;
-        }
-        .botones button {
+        .btn {
+            background: #444;
+            color: white;
             padding: 10px 20px;
-            font-size: 1rem;
+            margin: 10px;
+            border: none;
+            cursor: pointer;
         }
-        .svg {
-            margin-top: 20px;
-            background-color: #111;
-            border: 2px solid #555;
-            display: inline-block;
-        }
-        img.fondo {
-            margin-top: 10px;
-            width: 90%;
-            max-width: 600px;
-            border: 2px solid #222;
-            border-radius: 10px;
+        .btn:hover {
+            background: #666;
         }
     </style>
 </head>
 <body>
-    <h1>🌌 Mazmorra de Panterra</h1>
-    <div class="nivel">Nivel actual: {{ nivel }}</div>
-    
-    <div class="botones">
-        <form method="post">
-            <button name="bajar">⬅️ Anterior</button>
-            <button name="subir">➡️ Siguiente</button>
-        </form>
+    <h1>Generador de Mazmorras</h1>
+    <div>
+        <button class="btn" onclick="generarMazmorra()">Generar</button>
+        <button class="btn" onclick="descargarJSON()">Descargar JSON</button>
+        <button class="btn" onclick="descargarSVG()">Descargar SVG</button>
     </div>
+    <div id="mapa"></div>
 
-    <div class="svg">{{ mapa_svg|safe }}</div>
+    <script>
+        let datosJSON = null;
+        let svgTexto = "";
 
-    <img class="fondo" src="{{ url_for('static', filename=fondo) }}" alt="Fondo de Bioma">
+        function generarMazmorra() {
+            fetch('/generar?nivel=1')
+                .then(res => res.json())
+                .then(data => {
+                    svgTexto = data.svg;
+                    datosJSON = data.json;
+                    document.getElementById('mapa').innerHTML = svgTexto;
+                });
+        }
 
-    <div style="margin-top: 20px;">
-        <a href="{{ url_for('reiniciar') }}" style="color: #ccc;">🔄 Reiniciar</a>
-    </div>
+        function descargarJSON() {
+            if (!datosJSON) return alert("Genera primero una mazmorra.");
+            const blob = new Blob([JSON.stringify(datosJSON, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mazmorra.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function descargarSVG() {
+            if (!svgTexto) return alert("Genera primero una mazmorra.");
+            const blob = new Blob([svgTexto], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mazmorra.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
 </body>
 </html>
