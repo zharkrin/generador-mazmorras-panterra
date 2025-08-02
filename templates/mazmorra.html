@@ -6,48 +6,64 @@
     <style>
         body {
             margin: 0;
-            background: url("/static/fondos/{{ bioma }}.png") no-repeat center center fixed;
-            background-size: cover;
-            font-family: Arial, sans-serif;
+            padding: 0;
+            font-family: sans-serif;
+            background-color: black;
         }
+
+        .mazmorra {
+            width: 100vw;
+            height: 100vh;
+            background-image: url("/static/biomas/{{ bioma }}.png");
+            background-size: cover;
+            background-position: center;
+        }
+
         .ui {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 20px;
-            border-radius: 10px;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
             color: white;
-            display: flex;
-            gap: 10px;
-            align-items: center;
+            padding: 10px 15px;
+            border-radius: 8px;
         }
-        button {
-            padding: 10px;
-            border: none;
-            background: #444;
+
+        .elementos {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 15px;
+            border-radius: 8px;
             color: white;
-            border-radius: 5px;
-            cursor: pointer;
         }
-        button:hover {
-            background: #666;
+
+        .elementos h3 {
+            margin: 0 0 5px 0;
         }
     </style>
 </head>
 <body>
+    <div class="mazmorra"></div>
+
     <div class="ui">
-        <form action="{{ url_for('anterior_nivel') }}" method="get">
-            <button type="submit">⬅ Nivel anterior</button>
-        </form>
-        <span>Nivel {{ numero }} de {{ total }}</span>
-        <form action="{{ url_for('siguiente_nivel') }}" method="get">
-            <button type="submit">Nivel siguiente ➡</button>
-        </form>
-        <form action="{{ url_for('reiniciar') }}" method="get">
-            <button type="submit">🔄 Nueva mazmorra</button>
-        </form>
+        <p>Nivel {{ numero }} / {{ total }}</p>
+        {% if numero > 1 %}
+        <a href="{{ url_for('mostrar_nivel', numero=numero - 2) }}" style="color: lightblue;">← Anterior</a>
+        {% endif %}
+        {% if numero < total %}
+        <a href="{{ url_for('mostrar_nivel', numero=numero) }}" style="color: lightgreen; margin-left: 10px;">Siguiente →</a>
+        {% endif %}
+    </div>
+
+    <div class="elementos">
+        <h3>Bioma: {{ bioma|capitalize }}</h3>
+        <ul>
+            {% for item in elementos %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
     </div>
 </body>
 </html>
