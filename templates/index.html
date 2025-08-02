@@ -2,54 +2,57 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Nivel {{ nivel }} - Mazmorra</title>
+    <title>Mazmorra - Nivel {{ nivel }}</title>
     <style>
         body {
             background-color: #000;
+            color: #fff;
             text-align: center;
-            color: white;
             font-family: sans-serif;
         }
-        .fondo {
-            width: 100%;
-            max-width: 90vw;
-            margin-top: 20px;
-            border: 3px solid #555;
-            border-radius: 10px;
+        .nivel {
+            font-size: 1.5rem;
+            margin: 10px;
         }
         .botones {
-            margin: 20px;
+            margin: 10px;
         }
-        button {
+        .botones button {
             padding: 10px 20px;
-            margin: 5px;
             font-size: 1rem;
         }
-        .nivel {
-            margin-top: 10px;
-            font-size: 1.5rem;
-        }
-        .reinicio {
+        .svg {
             margin-top: 20px;
-            color: #aaa;
-            font-size: 0.9rem;
+            background-color: #111;
+            border: 2px solid #555;
+            display: inline-block;
+        }
+        img.fondo {
+            margin-top: 10px;
+            width: 90%;
+            max-width: 600px;
+            border: 2px solid #222;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
     <h1>🌌 Mazmorra de Panterra</h1>
     <div class="nivel">Nivel actual: {{ nivel }}</div>
-    <img class="fondo" src="{{ url_for('static', filename=fondo) }}" alt="Mazmorra">
     
     <div class="botones">
         <form method="post">
-            <button type="submit" name="bajar">⬅️ Nivel anterior</button>
-            <button type="submit" name="subir">➡️ Nivel siguiente</button>
+            <button name="bajar">⬅️ Anterior</button>
+            <button name="subir">➡️ Siguiente</button>
         </form>
     </div>
 
-    <div class="reinicio">
-        <a href="{{ url_for('reiniciar') }}" style="color: #ccc;">🔄 Reiniciar todo</a>
+    <div class="svg">{{ mapa_svg|safe }}</div>
+
+    <img class="fondo" src="{{ url_for('static', filename=fondo) }}" alt="Fondo de Bioma">
+
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('reiniciar') }}" style="color: #ccc;">🔄 Reiniciar</a>
     </div>
 </body>
 </html>
