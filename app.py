@@ -1,94 +1,111 @@
-def generar_salas_svg(nivel, semilla, ancho=1200, alto=800):
-    random.seed(semilla + nivel)
+import os
+import random
+import json
+from flask import Flask, render_template, send_file, request, jsonify
+from flask_cors import CORS
+from io import BytesIO
+import svgwrite
 
-    num_salas = random.randint(8, 14)
+app = Flask(__name__)
+CORS(app)
+
+def generar_salas_svg(ancho=1400, alto=1000, nivel=1):
     salas = []
 
-    tipos_posibles = ["vacía", "enemigos", "cofre", "trampa", "bloqueada", "especial"]
+    tipos = ["normal", "cofre", "trampa", "enemigos", "especial", "bloqueada"]
 
-    # Entrada
-    salas.append({
-        "x": random.randint(50, ancho - 150),
-        "y": random.randint(50, alto - 150),
-        "w": random.randint(70, 120),
-        "h": random.randint(70, 120),
-        "tipo": "entrada"
-    })
-
-    # Intermedias
-    for _ in range(num_salas - 2):
-        tipo = random.choice(tipos_posibles)
-        salas.append({
+    for _ in range(random.randint(10, 20)):
+        tipo = random.choice(tipos)
+        sala = {
             "x": random.randint(50, ancho - 150),
             "y": random.randint(50, alto - 150),
             "w": random.randint(60, 110),
             "h": random.randint(60, 110),
             "tipo": tipo
-        })
+        }
 
-    # Jefe (cada 10 niveles) o especial (cada 5)
-    if nivel % 10 == 0:
-        tipo_final = "jefe"
-    elif nivel % 5 == 0:
-        tipo_final = "especial"
-    else:
-        tipo_final = random.choice(tipos_posibles)
+        if tipo == "cofre":
+            sala["rareza"] = random.choices(
+                ["Normal", "Infrecuente", "Raro", "Épico", "Legendario", "Único", "Mítico"],
+                weights=[30, 25, 20, 10, 7, 5, 3]
+            )[0]
+            sala["oro"] = random.randint(20, 200)
+            sala["objeto"] = random.choice(["Espada", "Poción", "Anillo", "Pergamino", "Armadura"])
 
-    salas.append({
+        elif tipo == "trampa":
+            sala["trampa"] = random.choice(["Flechas", "Pozo", "Gas", "Magia"])
+            sala["daño"] = random.randint(5, 30)
+            sala["detección"] = random.randint(10, 20)
+
+        elif tipo == "enemigos":
+            sala["cantidad"] = random.randint(2, 6)
+            sala["enemigo"] = random.choice(["Goblin", "No-muerto", "Bestia", "Elemental"])
+            sala["rareza"] = random.choice(["Normal", "Raro", "Élite"])
+
+        elif tipo == "especial":
+            sala["evento"] = random.choice(["Altar", "Portal", "Puzzle", "NPC", "Ruinas"])
+
+        elif tipo == "bloqueada":
+            sala["llave"] = f"LL-{random.randint(100,999)}"
+
+        salas.append(sala)
+
+    # Sala final (jefe o especial)
+    tipo_final = random.choice(["jefe", "especial"])
+    jefe = {
         "x": random.randint(50, ancho - 150),
         "y": random.randint(50, alto - 150),
         "w": random.randint(80, 130),
         "h": random.randint(80, 130),
         "tipo": tipo_final
+    }
+
+    if tipo_final == "jefe":
+        jefe["nombre"] = random.choice(["Hidra", "Señor Espectral", "Gólem Ancestral", "Archimago Oscuro"])
+        jefe["nivel"] = nivel
+        jefe["loot"] = random.choice(["Legendario", "Épico", "Único"])
+    elif tipo_final == "especial":
+        jefe["evento"] = random.choice(["Altar", "Portal", "Puzzle", "NPC", "Ruinas"])
+
+    salas.append(jefe)
+    return salas
+
+def generar_svg(salas, ancho=1400, alto=1000):
+    dwg = svgwrite.Drawing(size=(ancho, alto))
+    for sala in salas:
+        color = {
+            "normal": "#cccccc",
+            "cofre": "#ffd700",
+            "trampa": "#ff4444",
+            "enemigos": "#aa00ff",
+            "especial": "#00ffff",
+            "bloqueada": "#4444ff",
+            "jefe": "#ff8800"
+        }.get(sala["tipo"], "#999999")
+
+        dwg.add(dwg.rect(
+            insert=(sala["x"], sala["y"]),
+            size=(sala["w"], sala["h"]),
+            fill=color,
+            stroke="#000",
+            stroke_width=2
+        ))
+
+    return dwg.tostring()
+
+@app.route('/generar', methods=['GET'])
+def generar():
+    nivel = int(request.args.get("nivel", 1))
+    ancho = int(request.args.get("ancho", 1400))
+    alto = int(request.args.get("alto", 1000))
+
+    salas = generar_salas_svg(ancho=ancho, alto=alto, nivel=nivel)
+    svg_data = generar_svg(salas, ancho=ancho, alto=alto)
+
+    return jsonify({
+        "svg": svg_data,
+        "json": salas
     })
 
-    # Conexiones entre centros
-    conexiones = []
-    for i in range(len(salas) - 1):
-        c1x = salas[i]["x"] + salas[i]["w"] // 2
-        c1y = salas[i]["y"] + salas[i]["h"] // 2
-        c2x = salas[i + 1]["x"] + salas[i + 1]["w"] // 2
-        c2y = salas[i + 1]["y"] + salas[i + 1]["h"] // 2
-        conexiones.append((c1x, c1y, c2x, c2y))
-
-    # Colores por tipo
-    colores = {
-        "entrada": "#0f0",
-        "jefe": "#f00",
-        "especial": "#f0f",
-        "enemigos": "#800",
-        "cofre": "#ff0",
-        "trampa": "#f80",
-        "vacía": "#444",
-        "bloqueada": "#00f"
-    }
-
-    iconos = {
-        "entrada": "🚪",
-        "jefe": "💀",
-        "especial": "💠",
-        "enemigos": "🧟",
-        "cofre": "🧳",
-        "trampa": "💣",
-        "vacía": "",
-        "bloqueada": "🔒"
-    }
-
-    # SVG
-    svg = f'<svg width="{ancho}" height="{alto}" xmlns="http://www.w3.org/2000/svg" style="background-color:#111;">'
-
-    # Conexiones
-    for x1, y1, x2, y2 in conexiones:
-        svg += f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#0ff" stroke-width="2"/>'
-
-    # Salas
-    for sala in salas:
-        x, y, w, h, tipo = sala["x"], sala["y"], sala["w"], sala["h"], sala["tipo"]
-        color = colores.get(tipo, "#444")
-        icono = iconos.get(tipo, "")
-        svg += f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{color}" stroke="#fff" stroke-width="2"/>'
-        if icono:
-            svg += f'<text x="{x + w//2}" y="{y + h//2}" text-anchor="middle" fill="#fff" font-size="24" dominant-baseline="middle">{icono}</text>'
-
-    svg += '</svg>'
-    return svg
+if __name__ == '__main__':
+    app.run(debug=True)
