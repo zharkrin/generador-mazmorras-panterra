@@ -1,28 +1,15 @@
-from .utils import generar_bioma, generar_jefe, generar_campamento
+import random
 
-def generar_niveles_mazmorra(niveles_totales):
-    niveles = []
+BIOMAS = ["bosque", "desierto", "caverna", "roca"]
+ANCHO = 10
+ALTO = 10
 
-    for i in range(1, niveles_totales + 1):
-        nivel = {
-            "numero": i,
-            "bioma": generar_bioma(i),
-            "elementos": []
-        }
-
-        # Si es múltiplo de 10 → añadir jefe
-        if i % 10 == 0:
-            nivel["elementos"].append(generar_jefe(i))
-
-            # Luego del jefe → añadir campamento en nivel intermedio .5
-            campamento = generar_campamento(i)
-            niveles.append(nivel)  # primero el nivel del jefe
-            niveles.append({
-                "numero": campamento["nivel"],
-                "bioma": "zona_segura",
-                "elementos": [campamento]
-            })
-        else:
-            niveles.append(nivel)
-
-    return niveles
+def generar_mapa():
+    return {
+        "ancho": ANCHO,
+        "alto": ALTO,
+        "tiles": [
+            [random.choice(BIOMAS) for _ in range(ANCHO)]
+            for _ in range(ALTO)
+        ]
+    }
