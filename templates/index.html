@@ -2,158 +2,78 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Generador de Mazmorras</title>
+  <title>Mapa Isométrico</title>
   <style>
-    body {
-      background: #000;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
+    body { background: #222; color: #fff; text-align: center; margin: 0; font-family: sans-serif; }
+    #visor { position: relative; width: 100vw; height: 90vh; overflow: auto; background: #000; }
+    .tile {
+      position: absolute;
+      width: 256px;
+      height: 256px;
+      transform: skewY(-26.565°) scaleY(0.5);
     }
-
-    canvas {
-      background-color: #111;
+    .botones {
       margin-top: 10px;
-      image-rendering: pixelated;
-      border: 2px solid #444;
     }
-
-    .buttons {
-      margin: 10px;
-    }
-
-    .buttons button,
-    .buttons label {
+    button {
       padding: 10px 20px;
       margin: 5px;
-      font-size: 16px;
-      background-color: #333;
-      color: #fff;
-      border: none;
+      font-size: 1em;
       cursor: pointer;
-    }
-
-    .buttons input[type="file"] {
-      display: none;
-    }
-
-    .buttons button:hover,
-    .buttons label:hover {
-      background-color: #555;
     }
   </style>
 </head>
 <body>
-  <h1>Nivel {{ nivel }}</h1>
-
-  <div class="buttons">
-    <a href="/?nivel={{ nivel - 1 }}"><button>&larr; Anterior</button></a>
-    <a href="/?nivel={{ nivel + 1 }}"><button>Siguiente &rarr;</button></a>
-    <button onclick="guardarJSON()">💾 Guardar</button>
-    <button onclick="guardarPNG()">🖼 Guardar PNG</button>
-    <label for="fileInput">📂 Cargar JSON</label>
-    <input type="file" id="fileInput" accept=".json" />
+  <h1>Mapa Isométrico de Mazmorra</h1>
+  <div id="visor"></div>
+  <div class="botones">
+    <button onclick="nivelAnterior()">← Anterior</button>
+    <button onclick="nivelSiguiente()">Siguiente →</button>
   </div>
 
-  <canvas id="canvas" width="2048" height="2048"></canvas>
-
   <script>
-    const nivel = {{ nivel }};
-    const mapa = {{ mapa | tojson }};
-    const tileSize = 512;
-    const tileImages = {};
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+    let niveles = [];
+    let actual = 0;
 
-    const tileMap = {
-      "bosque": "static/tiles/Bosque.png",
-      "cueva": "static/tiles/Cueva.png",
-      "lava": "static/tiles/Lava.png",
-      "agua": "static/tiles/Agua.png",
-      "piedra": "static/tiles/Piedra.png",
-      "jungla": "static/tiles/Jungla.png",
-      "nieve": "static/tiles/Nieve.png",
-      "desierto": "static/tiles/Desierto.png",
-      "pantano": "static/tiles/Pantano.png",
-      "ciudad": "static/tiles/Ciudad.png",
-      "boss": "static/tiles/Boss.png",
-      "campamento": "static/tiles/Campamento.png"
-    };
-
-    function cargarImagen(nombre, src) {
-      return new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => resolve({ nombre, img });
-        img.src = src;
-      });
+    async function cargarNiveles() {
+      const res = await fetch('/niveles');
+      niveles = await res.json();
+      if (niveles.length > 0) cargar(niveles[actual]);
     }
 
-    async function cargarTodasLasImagenes() {
-      const promesas = Object.entries(tileMap).map(([nombre, src]) => cargarImagen(nombre, src));
-      const resultados = await Promise.all(promesas);
-      resultados.forEach(({ nombre, img }) => {
-        tileImages[nombre] = img;
-      });
-      dibujarMapa();
-    }
+    async function cargar(nombre) {
+      const res = await fetch('/nivel/' + nombre);
+      const datos = await res.json();
+      const visor = document.getElementById('visor');
+      visor.innerHTML = '';
 
-    function dibujarMapa() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const offsetX = canvas.width / 2;
-      const offsetY = 100;
-
-      for (let y = 0; y < mapa.length; y++) {
-        for (let x = 0; x < mapa[y].length; x++) {
-          const tipo = mapa[y][x];
-          const img = tileImages[tipo];
-          if (!img) continue;
-
-          const isoX = (x - y) * (tileSize / 2) + offsetX;
-          const isoY = (x + y) * (tileSize / 4) + offsetY;
-
-          ctx.drawImage(img, isoX, isoY, tileSize, tileSize);
-        }
+      if (datos.tiles) {
+        datos.tiles.forEach(tile => {
+          const img = document.createElement('img');
+          img.src = '/static/Tiles/' + tile.tipo + '.png';
+          img.className = 'tile';
+          img.style.left = (tile.x * 256) + 'px';
+          img.style.top = (tile.y * 128) + 'px';
+          visor.appendChild(img);
+        });
       }
     }
 
-    function guardarJSON() {
-      const blob = new Blob([JSON.stringify(mapa)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "nivel_" + nivel + ".json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    function nivelAnterior() {
+      if (actual > 0) {
+        actual--;
+        cargar(niveles[actual]);
+      }
     }
 
-    function guardarPNG() {
-      const link = document.createElement('a');
-      link.download = "mazmorra_nivel_" + nivel + ".png";
-      link.href = canvas.toDataURL("image/png");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    function nivelSiguiente() {
+      if (actual < niveles.length - 1) {
+        actual++;
+        cargar(niveles[actual]);
+      }
     }
 
-    document.getElementById("fileInput").addEventListener("change", function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const nuevoMapa = JSON.parse(e.target.result);
-        for (let y = 0; y < nuevoMapa.length; y++) {
-          for (let x = 0; x < nuevoMapa[y].length; x++) {
-            mapa[y][x] = nuevoMapa[y][x];
-          }
-        }
-        dibujarMapa();
-      };
-      reader.readAsText(file);
-    });
-
-    cargarTodasLasImagenes();
+    cargarNiveles();
   </script>
 </body>
 </html>
