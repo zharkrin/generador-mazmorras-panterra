@@ -1,65 +1,41 @@
-from flask import Flask, jsonify, render_template, send_from_directory
+from flask import Flask, render_template, jsonify, request
 import os
-import random
 import json
 
 app = Flask(__name__)
 
-# Ruta a los niveles de mazmorra generados
-MAPAS_DIR = "niveles"
-
-# Biomas disponibles (asegúrate de que existen como imagen en static/Tiles/)
-BIOMAS = [
-    "Bosque", "Caverna", "Desierto", "Ruinas", "Volcán",
-    "Mar", "Pantano", "Hielo", "Cristal", "Abismo"
-]
+NIVELES_DIR = 'niveles'
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    niveles = sorted([f for f in os.listdir(NIVELES_DIR) if f.endswith('.json')])
+    if niveles:
+        nivel_actual = niveles[0]
+    else:
+        nivel_actual = None
+    return render_template('index.html', nivel=nivel_actual)
 
-@app.route('/api/nivel/<int:nivel>')
-def obtener_nivel(nivel):
-    tiles = cargar_mapa(nivel)
-    bioma = obtener_bioma(nivel)
-    return jsonify({
-        "nivel": nivel,
-        "bioma": bioma,
-        "tiles": tiles
-    })
+@app.route('/nivel/<nombre>')
+def cargar_nivel(nombre):
+    ruta = os.path.join(NIVELES_DIR, nombre)
+    if os.path.exists(ruta):
+        with open(ruta, 'r') as archivo:
+            datos = json.load(archivo)
+        return jsonify(datos)
+    return jsonify({"error": "Nivel no encontrado"}), 404
 
-def obtener_bioma(nivel):
-    # Repetimos los biomas cíclicamente según el número de nivel
-    return BIOMAS[(nivel - 1) % len(BIOMAS)]
+@app.route('/niveles')
+def listar_niveles():
+    niveles = sorted([f for f in os.listdir(NIVELES_DIR) if f.endswith('.json')])
+    return jsonify(niveles)
 
-def cargar_mapa(nivel):
-    ruta = os.path.join(MAPAS_DIR, f"nivel_{nivel}.json")
-    if not os.path.exists(ruta):
-        return []  # Nivel vacío
-
-    with open(ruta, "r", encoding="utf-8") as archivo:
-        datos = json.load(archivo)
-
-    bioma = obtener_bioma(nivel)
-    imagen = f"/static/Tiles/{bioma}.png"
-
-    resultado = []
-    for fila in datos:
-        fila_convertida = []
-        for tile in fila:
-            fila_convertida.append({
-                "x": tile["x"],
-                "y": tile["y"],
-                "imagen": imagen
-            })
-        resultado.append(fila_convertida)
-
-    return resultado
-
-@app.route('/static/<path:filename>')
-def servir_static(filename):
-    return send_from_directory("static", filename)
-
-# Ejecutar servidor
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/guardar', methods=['POST'])
+def guardar():
+    datos = request.json
+    nombre = datos.get('nombre')
+    contenido = datos.get('contenido')
+    if not nombre or not contenido:
+        return jsonify({"error": "Faltan datos"}), 400
+    with open(os.path.join(NIVELES_DIR, nombre), 'w') as archivo:
+        json.dump(contenido, archivo, indent=2)
+    return jsonify({"mensaje": "Guardado con éxito"})
