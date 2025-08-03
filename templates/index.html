@@ -1,137 +1,159 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Generador de Mazmorras</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <style>
     body {
-      background-color: #222;
+      background: #000;
       color: #fff;
+      font-family: sans-serif;
       text-align: center;
-      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
 
     canvas {
+      background-color: #111;
+      margin-top: 10px;
       image-rendering: pixelated;
-      margin-top: 20px;
+      border: 2px solid #444;
     }
 
     .buttons {
-      margin-top: 20px;
+      margin: 10px;
     }
 
-    button {
-      padding: 8px 16px;
+    .buttons button,
+    .buttons label {
+      padding: 10px 20px;
       margin: 5px;
       font-size: 16px;
+      background-color: #333;
+      color: #fff;
+      border: none;
       cursor: pointer;
     }
 
-    #level-name {
-      margin-top: 10px;
-      font-size: 20px;
-    }
-
-    input[type="file"] {
+    .buttons input[type="file"] {
       display: none;
     }
 
-    label[for="fileInput"] {
-      background-color: #444;
-      color: white;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-left: 10px;
+    .buttons button:hover,
+    .buttons label:hover {
+      background-color: #555;
     }
   </style>
 </head>
 <body>
-  <h1>🧭 Generador de Mazmorras</h1>
-
-  <div id="level-name">Nivel {{ nivel }}</div>
-
-  <canvas id="mapCanvas" width="1024" height="1024"></canvas>
+  <h1>Nivel {{ nivel }}</h1>
 
   <div class="buttons">
     <a href="/?nivel={{ nivel - 1 }}"><button>&larr; Anterior</button></a>
     <a href="/?nivel={{ nivel + 1 }}"><button>Siguiente &rarr;</button></a>
     <button onclick="guardarJSON()">💾 Guardar</button>
+    <button onclick="guardarPNG()">🖼 Guardar PNG</button>
     <label for="fileInput">📂 Cargar JSON</label>
     <input type="file" id="fileInput" accept=".json" />
   </div>
 
+  <canvas id="canvas" width="2048" height="2048"></canvas>
+
   <script>
-    let tiles = {{ tiles_json|safe }};
     const nivel = {{ nivel }};
-    const canvas = document.getElementById("mapCanvas");
-    const ctx = canvas.getContext("2d");
+    const mapa = {{ mapa | tojson }};
     const tileSize = 512;
+    const tileImages = {};
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-    const images = {};
-    const promises = [];
+    const tileMap = {
+      "bosque": "static/tiles/Bosque.png",
+      "cueva": "static/tiles/Cueva.png",
+      "lava": "static/tiles/Lava.png",
+      "agua": "static/tiles/Agua.png",
+      "piedra": "static/tiles/Piedra.png",
+      "jungla": "static/tiles/Jungla.png",
+      "nieve": "static/tiles/Nieve.png",
+      "desierto": "static/tiles/Desierto.png",
+      "pantano": "static/tiles/Pantano.png",
+      "ciudad": "static/tiles/Ciudad.png",
+      "boss": "static/tiles/Boss.png",
+      "campamento": "static/tiles/Campamento.png"
+    };
 
-    function cargarImagenes() {
-      const tipos = new Set();
-      tiles.forEach(fila => fila.forEach(tile => tipos.add(tile.tipo)));
-
-      for (const tipo of tipos) {
-        if (!images[tipo]) {
-          images[tipo] = new Image();
-          images[tipo].src = "/static/Tiles/" + tipo + ".png";
-          const p = new Promise(resolve => {
-            images[tipo].onload = resolve;
-          });
-          promises.push(p);
-        }
-      }
-
-      return Promise.all(promises);
+    function cargarImagen(nombre, src) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve({ nombre, img });
+        img.src = src;
+      });
     }
 
-    function renderTiles() {
-      for (let y = 0; y < tiles.length; y++) {
-        for (let x = 0; x < tiles[y].length; x++) {
-          const tipo = tiles[y][x].tipo;
-          if (images[tipo]) {
-            ctx.drawImage(images[tipo], x * tileSize, y * tileSize, tileSize, tileSize);
-          }
+    async function cargarTodasLasImagenes() {
+      const promesas = Object.entries(tileMap).map(([nombre, src]) => cargarImagen(nombre, src));
+      const resultados = await Promise.all(promesas);
+      resultados.forEach(({ nombre, img }) => {
+        tileImages[nombre] = img;
+      });
+      dibujarMapa();
+    }
+
+    function dibujarMapa() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const offsetX = canvas.width / 2;
+      const offsetY = 100;
+
+      for (let y = 0; y < mapa.length; y++) {
+        for (let x = 0; x < mapa[y].length; x++) {
+          const tipo = mapa[y][x];
+          const img = tileImages[tipo];
+          if (!img) continue;
+
+          const isoX = (x - y) * (tileSize / 2) + offsetX;
+          const isoY = (x + y) * (tileSize / 4) + offsetY;
+
+          ctx.drawImage(img, isoX, isoY, tileSize, tileSize);
         }
       }
     }
-
-    cargarImagenes().then(renderTiles);
 
     function guardarJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tiles, null, 2));
-      const dlAnchor = document.createElement('a');
-      dlAnchor.setAttribute("href", dataStr);
-      dlAnchor.setAttribute("download", "mazmorra_nivel_" + nivel + ".json");
-      document.body.appendChild(dlAnchor);
-      dlAnchor.click();
-      dlAnchor.remove();
+      const blob = new Blob([JSON.stringify(mapa)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "nivel_" + nivel + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function guardarPNG() {
+      const link = document.createElement('a');
+      link.download = "mazmorra_nivel_" + nivel + ".png";
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     document.getElementById("fileInput").addEventListener("change", function (e) {
       const file = e.target.files[0];
-      if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = function (event) {
-        try {
-          const loadedTiles = JSON.parse(event.target.result);
-          tiles = loadedTiles;
-          cargarImagenes().then(() => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            renderTiles();
-          });
-        } catch (err) {
-          alert("Error al cargar el archivo JSON.");
+      reader.onload = function (e) {
+        const nuevoMapa = JSON.parse(e.target.result);
+        for (let y = 0; y < nuevoMapa.length; y++) {
+          for (let x = 0; x < nuevoMapa[y].length; x++) {
+            mapa[y][x] = nuevoMapa[y][x];
+          }
         }
+        dibujarMapa();
       };
       reader.readAsText(file);
     });
+
+    cargarTodasLasImagenes();
   </script>
 </body>
 </html>
