@@ -1,147 +1,95 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Mapa Isométrico</title>
-  <style>
-    body {
-      background: #1e1e1e;
-      color: white;
-      font-family: Arial, sans-serif;
-      overflow-x: auto;
-    }
+    <meta charset="UTF-8">
+    <title>Generador de Mazmorras</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background-color: #222;
+            color: #fff;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
 
-    header {
-      text-align: center;
-      padding: 20px;
-    }
+        canvas {
+            image-rendering: pixelated;
+            margin-top: 20px;
+        }
 
-    #mapa {
-      position: relative;
-      width: 100%;
-      height: 90vh;
-    }
+        .buttons {
+            margin-top: 20px;
+        }
 
-    .tile {
-      position: absolute;
-      width: 256px;
-      height: 256px;
-      transform: scale(1) rotateX(45deg) rotateZ(45deg);
-      transform-origin: center center;
-      image-rendering: pixelated;
-    }
+        button {
+            padding: 8px 16px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
 
-    select, button {
-      font-size: 16px;
-      padding: 5px 10px;
-      background-color: #333;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      margin: 0 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #555;
-    }
-
-    #bioma {
-      margin-top: 10px;
-      font-size: 20px;
-      font-weight: bold;
-      color: #88f0ff;
-    }
-  </style>
+        #level-name {
+            margin-top: 10px;
+            font-size: 20px;
+        }
+    </style>
 </head>
 <body>
+    <h1>🧭 Generador de Mazmorras</h1>
 
-  <header>
-    <h1>Mapa Isométrico</h1>
+    <div id="level-name">Nivel {{ nivel }}</div>
 
-    <button id="anterior">⬅️ Anterior</button>
+    <canvas id="mapCanvas" width="1024" height="1024"></canvas>
 
-    <label for="nivel">Nivel: </label>
-    <select id="nivel"></select>
+    <div class="buttons">
+        <a href="/?nivel={{ nivel - 1 }}"><button>&larr; Anterior</button></a>
+        <a href="/?nivel={{ nivel + 1 }}"><button>Siguiente &rarr;</button></a>
+        <button onclick="guardarJSON()">💾 Guardar</button>
+    </div>
 
-    <button id="siguiente">Siguiente ➡️</button>
+    <script>
+        const tiles = {{ tiles_json|safe }};
+        const canvas = document.getElementById("mapCanvas");
+        const ctx = canvas.getContext("2d");
+        const tileSize = 512;
 
-    <div id="bioma">Bioma: ???</div>
-  </header>
+        const nivel = {{ nivel }};
 
-  <div id="mapa"></div>
+        const images = {};
+        const promises = [];
 
-  <script>
-    const selector = document.getElementById("nivel");
-    const anteriorBtn = document.getElementById("anterior");
-    const siguienteBtn = document.getElementById("siguiente");
-    const biomaLabel = document.getElementById("bioma");
+        for (const fila of tiles) {
+            for (const tile of fila) {
+                const tipo = tile.tipo;
+                if (!images[tipo]) {
+                    images[tipo] = new Image();
+                    images[tipo].src = "/static/Tiles/" + tipo + ".png";
+                    const p = new Promise(resolve => {
+                        images[tipo].onload = resolve;
+                    });
+                    promises.push(p);
+                }
+            }
+        }
 
-    const MAX_NIVELES = 100;
-
-    // Rellenar selector
-    for (let i = 1; i <= MAX_NIVELES; i++) {
-      const option = document.createElement("option");
-      option.value = i;
-      option.textContent = "Nivel " + i;
-      selector.appendChild(option);
-    }
-
-    selector.addEventListener("change", () => {
-      const nivelSeleccionado = parseInt(selector.value);
-      cargarMapa(nivelSeleccionado);
-    });
-
-    anteriorBtn.addEventListener("click", () => {
-      let nivelActual = parseInt(selector.value);
-      if (nivelActual > 1) {
-        selector.value = nivelActual - 1;
-        cargarMapa(nivelActual - 1);
-      }
-    });
-
-    siguienteBtn.addEventListener("click", () => {
-      let nivelActual = parseInt(selector.value);
-      if (nivelActual < MAX_NIVELES) {
-        selector.value = nivelActual + 1;
-        cargarMapa(nivelActual + 1);
-      }
-    });
-
-    async function cargarMapa(nivel = 1) {
-      const res = await fetch(`/api/nivel/${nivel}`);
-      const data = await res.json();
-      const mapa = document.getElementById("mapa");
-      mapa.innerHTML = "";
-
-      biomaLabel.textContent = "Bioma: " + data.bioma;
-
-      const tileWidth = 256;
-      const tileHeight = 128;
-
-      data.tiles.forEach(fila => {
-        fila.forEach(tile => {
-          const tileElement = document.createElement("img");
-          tileElement.src = tile.imagen;
-          tileElement.className = "tile";
-
-          const x = tile.x;
-          const y = tile.y;
-
-          const isoX = (x - y) * tileWidth / 2;
-          const isoY = (x + y) * tileHeight / 2;
-
-          tileElement.style.left = `${isoX + 1000}px`;
-          tileElement.style.top = `${isoY}px`;
-
-          mapa.appendChild(tileElement);
+        Promise.all(promises).then(() => {
+            for (let y = 0; y < tiles.length; y++) {
+                for (let x = 0; x < tiles[y].length; x++) {
+                    const tipo = tiles[y][x].tipo;
+                    ctx.drawImage(images[tipo], x * tileSize, y * tileSize, tileSize, tileSize);
+                }
+            }
         });
-      });
-    }
 
-    selector.value = 1;
-    cargarMapa(1);
-  </script>
-
+        function guardarJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tiles, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "mazmorra_nivel_" + nivel + ".json");
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+    </script>
 </body>
 </html>
