@@ -31,13 +31,19 @@
       image-rendering: pixelated;
     }
 
-    select {
+    select, button {
       font-size: 16px;
       padding: 5px 10px;
       background-color: #333;
       color: white;
       border: none;
       border-radius: 5px;
+      margin: 0 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #555;
     }
   </style>
 </head>
@@ -45,20 +51,26 @@
 
   <header>
     <h1>Mapa Isométrico</h1>
+
+    <button id="anterior">⬅️ Anterior</button>
+
     <label for="nivel">Nivel: </label>
-    <select id="nivel">
-      <!-- Generamos 100 niveles -->
-      <!-- JS los rellenará al cargar la página -->
-    </select>
+    <select id="nivel"></select>
+
+    <button id="siguiente">Siguiente ➡️</button>
   </header>
 
   <div id="mapa"></div>
 
   <script>
     const selector = document.getElementById("nivel");
+    const anteriorBtn = document.getElementById("anterior");
+    const siguienteBtn = document.getElementById("siguiente");
+
+    const MAX_NIVELES = 100;
 
     // Rellenar el selector con niveles del 1 al 100
-    for (let i = 1; i <= 100; i++) {
+    for (let i = 1; i <= MAX_NIVELES; i++) {
       const option = document.createElement("option");
       option.value = i;
       option.textContent = "Nivel " + i;
@@ -68,6 +80,22 @@
     selector.addEventListener("change", () => {
       const nivelSeleccionado = parseInt(selector.value);
       cargarMapa(nivelSeleccionado);
+    });
+
+    anteriorBtn.addEventListener("click", () => {
+      let nivelActual = parseInt(selector.value);
+      if (nivelActual > 1) {
+        selector.value = nivelActual - 1;
+        cargarMapa(nivelActual - 1);
+      }
+    });
+
+    siguienteBtn.addEventListener("click", () => {
+      let nivelActual = parseInt(selector.value);
+      if (nivelActual < MAX_NIVELES) {
+        selector.value = nivelActual + 1;
+        cargarMapa(nivelActual + 1);
+      }
     });
 
     async function cargarMapa(nivel = 1) {
@@ -99,7 +127,8 @@
       });
     }
 
-    // Cargar el primer nivel al inicio
+    // Cargar el primer nivel al iniciar
+    selector.value = 1;
     cargarMapa(1);
   </script>
 
