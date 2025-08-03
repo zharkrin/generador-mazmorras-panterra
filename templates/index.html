@@ -2,28 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mazmorra de Biomas</title>
+    <title>Visor Isométrico</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <h1>Niveles de la Mazmorra</h1>
-    <ul id="lista-niveles"></ul>
+    <h1>Mapa Isométrico</h1>
+    <div id="mapa" class="mapa-iso"></div>
 
-    <script>
-        fetch("/mazmorra")
-            .then(res => res.json())
-            .then(data => {
-                const lista = document.getElementById("lista-niveles");
-                data.forEach(nivel => {
-                    const li = document.createElement("li");
-                    li.innerHTML = `<strong>Nivel ${nivel.numero}:</strong> ${nivel.bioma}`;
-
-                    nivel.elementos.forEach(e => {
-                        li.innerHTML += `<br>— ${e.tipo.toUpperCase()}: ${e.nombre}`;
-                    });
-
-                    lista.appendChild(li);
-                });
-            });
-    </script>
+    <script src="/static/js/viewer.js"></script>
 </body>
 </html>
