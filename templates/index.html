@@ -2,71 +2,65 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Generador de Mazmorras</title>
+  <title>Mapa Isométrico</title>
   <style>
     body {
-      background-color: #111;
-      margin: 0;
-      overflow: auto;
+      background: #1e1e1e;
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow-x: auto;
     }
-
     #mapa {
       position: relative;
       width: 100%;
       height: 100vh;
-      perspective: 2000px;
-      transform-style: preserve-3d;
     }
-
     .tile {
       position: absolute;
       width: 256px;
-      height: 128px;
-      transform: rotateX(60deg) rotateZ(45deg);
+      height: 256px;
+      transform: scale(1) rotateX(45deg) rotateZ(45deg);
       transform-origin: center center;
-      background-size: cover;
-      background-repeat: no-repeat;
+      image-rendering: pixelated;
     }
   </style>
 </head>
 <body>
+  <h1 style="text-align:center;">Mapa Isométrico</h1>
   <div id="mapa"></div>
 
   <script>
-    const mapa = document.getElementById('mapa');
-    const filas = 10;
-    const columnas = 10;
+    async function cargarMapa(nivel = 1) {
+      const res = await fetch(`/api/nivel/${nivel}`);
+      const data = await res.json();
+      const mapa = document.getElementById("mapa");
+      mapa.innerHTML = "";
 
-    const tiles = {
-      "bosque": "/static/Tiles/Bosque.png",
-      "desierto": "/static/Tiles/Desierto.png",
-      "cueva": "/static/Tiles/Cueva.png"
-    };
+      const tileWidth = 256;
+      const tileHeight = 128;
 
-    function generarMapa() {
-      for (let y = 0; y < filas; y++) {
-        for (let x = 0; x < columnas; x++) {
-          const tipo = escogerBioma(x, y);
-          const tile = document.createElement('div');
-          tile.className = 'tile';
-          tile.style.backgroundImage = `url('${tiles[tipo]}')`;
+      data.tiles.forEach(fila => {
+        fila.forEach(tile => {
+          const tileElement = document.createElement("img");
+          tileElement.src = tile.imagen;
+          tileElement.className = "tile";
 
-          const left = (x - y) * 128 + window.innerWidth / 2;
-          const top = (x + y) * 64;
-          tile.style.left = `${left}px`;
-          tile.style.top = `${top}px`;
+          const x = tile.x;
+          const y = tile.y;
 
-          mapa.appendChild(tile);
-        }
-      }
+          // Posición isométrica básica
+          const isoX = (x - y) * tileWidth / 2;
+          const isoY = (x + y) * tileHeight / 2;
+
+          tileElement.style.left = `${isoX + 1000}px`; // Ajuste para centrar
+          tileElement.style.top = `${isoY}px`;
+
+          mapa.appendChild(tileElement);
+        });
+      });
     }
 
-    function escogerBioma(x, y) {
-      const tipos = ["bosque", "desierto", "cueva"];
-      return tipos[Math.floor(Math.random() * tipos.length)];
-    }
-
-    generarMapa();
+    cargarMapa(1);
   </script>
 </body>
 </html>
