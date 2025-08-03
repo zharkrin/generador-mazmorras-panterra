@@ -45,6 +45,13 @@
     button:hover {
       background-color: #555;
     }
+
+    #bioma {
+      margin-top: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #88f0ff;
+    }
   </style>
 </head>
 <body>
@@ -58,6 +65,8 @@
     <select id="nivel"></select>
 
     <button id="siguiente">Siguiente ➡️</button>
+
+    <div id="bioma">Bioma: ???</div>
   </header>
 
   <div id="mapa"></div>
@@ -66,10 +75,11 @@
     const selector = document.getElementById("nivel");
     const anteriorBtn = document.getElementById("anterior");
     const siguienteBtn = document.getElementById("siguiente");
+    const biomaLabel = document.getElementById("bioma");
 
     const MAX_NIVELES = 100;
 
-    // Rellenar el selector con niveles del 1 al 100
+    // Rellenar selector
     for (let i = 1; i <= MAX_NIVELES; i++) {
       const option = document.createElement("option");
       option.value = i;
@@ -104,6 +114,8 @@
       const mapa = document.getElementById("mapa");
       mapa.innerHTML = "";
 
+      biomaLabel.textContent = "Bioma: " + data.bioma;
+
       const tileWidth = 256;
       const tileHeight = 128;
 
@@ -127,7 +139,6 @@
       });
     }
 
-    // Cargar el primer nivel al iniciar
     selector.value = 1;
     cargarMapa(1);
   </script>
