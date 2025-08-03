@@ -1,95 +1,137 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Generador de Mazmorras</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            background-color: #222;
-            color: #fff;
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <title>Generador de Mazmorras</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    body {
+      background-color: #222;
+      color: #fff;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
 
-        canvas {
-            image-rendering: pixelated;
-            margin-top: 20px;
-        }
+    canvas {
+      image-rendering: pixelated;
+      margin-top: 20px;
+    }
 
-        .buttons {
-            margin-top: 20px;
-        }
+    .buttons {
+      margin-top: 20px;
+    }
 
-        button {
-            padding: 8px 16px;
-            margin: 0 10px;
-            font-size: 16px;
-            cursor: pointer;
-        }
+    button {
+      padding: 8px 16px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
 
-        #level-name {
-            margin-top: 10px;
-            font-size: 20px;
-        }
-    </style>
+    #level-name {
+      margin-top: 10px;
+      font-size: 20px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    label[for="fileInput"] {
+      background-color: #444;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+  </style>
 </head>
 <body>
-    <h1>🧭 Generador de Mazmorras</h1>
+  <h1>🧭 Generador de Mazmorras</h1>
 
-    <div id="level-name">Nivel {{ nivel }}</div>
+  <div id="level-name">Nivel {{ nivel }}</div>
 
-    <canvas id="mapCanvas" width="1024" height="1024"></canvas>
+  <canvas id="mapCanvas" width="1024" height="1024"></canvas>
 
-    <div class="buttons">
-        <a href="/?nivel={{ nivel - 1 }}"><button>&larr; Anterior</button></a>
-        <a href="/?nivel={{ nivel + 1 }}"><button>Siguiente &rarr;</button></a>
-        <button onclick="guardarJSON()">💾 Guardar</button>
-    </div>
+  <div class="buttons">
+    <a href="/?nivel={{ nivel - 1 }}"><button>&larr; Anterior</button></a>
+    <a href="/?nivel={{ nivel + 1 }}"><button>Siguiente &rarr;</button></a>
+    <button onclick="guardarJSON()">💾 Guardar</button>
+    <label for="fileInput">📂 Cargar JSON</label>
+    <input type="file" id="fileInput" accept=".json" />
+  </div>
 
-    <script>
-        const tiles = {{ tiles_json|safe }};
-        const canvas = document.getElementById("mapCanvas");
-        const ctx = canvas.getContext("2d");
-        const tileSize = 512;
+  <script>
+    let tiles = {{ tiles_json|safe }};
+    const nivel = {{ nivel }};
+    const canvas = document.getElementById("mapCanvas");
+    const ctx = canvas.getContext("2d");
+    const tileSize = 512;
 
-        const nivel = {{ nivel }};
+    const images = {};
+    const promises = [];
 
-        const images = {};
-        const promises = [];
+    function cargarImagenes() {
+      const tipos = new Set();
+      tiles.forEach(fila => fila.forEach(tile => tipos.add(tile.tipo)));
 
-        for (const fila of tiles) {
-            for (const tile of fila) {
-                const tipo = tile.tipo;
-                if (!images[tipo]) {
-                    images[tipo] = new Image();
-                    images[tipo].src = "/static/Tiles/" + tipo + ".png";
-                    const p = new Promise(resolve => {
-                        images[tipo].onload = resolve;
-                    });
-                    promises.push(p);
-                }
-            }
+      for (const tipo of tipos) {
+        if (!images[tipo]) {
+          images[tipo] = new Image();
+          images[tipo].src = "/static/Tiles/" + tipo + ".png";
+          const p = new Promise(resolve => {
+            images[tipo].onload = resolve;
+          });
+          promises.push(p);
         }
+      }
 
-        Promise.all(promises).then(() => {
-            for (let y = 0; y < tiles.length; y++) {
-                for (let x = 0; x < tiles[y].length; x++) {
-                    const tipo = tiles[y][x].tipo;
-                    ctx.drawImage(images[tipo], x * tileSize, y * tileSize, tileSize, tileSize);
-                }
-            }
-        });
+      return Promise.all(promises);
+    }
 
-        function guardarJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tiles, null, 2));
-            const dlAnchor = document.createElement('a');
-            dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", "mazmorra_nivel_" + nivel + ".json");
-            document.body.appendChild(dlAnchor);
-            dlAnchor.click();
-            dlAnchor.remove();
+    function renderTiles() {
+      for (let y = 0; y < tiles.length; y++) {
+        for (let x = 0; x < tiles[y].length; x++) {
+          const tipo = tiles[y][x].tipo;
+          if (images[tipo]) {
+            ctx.drawImage(images[tipo], x * tileSize, y * tileSize, tileSize, tileSize);
+          }
         }
-    </script>
+      }
+    }
+
+    cargarImagenes().then(renderTiles);
+
+    function guardarJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tiles, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "mazmorra_nivel_" + nivel + ".json");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    }
+
+    document.getElementById("fileInput").addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        try {
+          const loadedTiles = JSON.parse(event.target.result);
+          tiles = loadedTiles;
+          cargarImagenes().then(() => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            renderTiles();
+          });
+        } catch (err) {
+          alert("Error al cargar el archivo JSON.");
+        }
+      };
+      reader.readAsText(file);
+    });
+  </script>
 </body>
 </html>
