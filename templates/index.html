@@ -1,79 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Mapa Isométrico</title>
-  <style>
-    body { background: #222; color: #fff; text-align: center; margin: 0; font-family: sans-serif; }
-    #visor { position: relative; width: 100vw; height: 90vh; overflow: auto; background: #000; }
-    .tile {
-      position: absolute;
-      width: 256px;
-      height: 256px;
-      transform: skewY(-26.565°) scaleY(0.5);
-    }
-    .botones {
-      margin-top: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 1em;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Generador de Mazmorras - Panterra</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: #eee;
+            text-align: center;
+        }
+        #visor {
+            width: 1024px;
+            height: 768px;
+            margin: 0 auto;
+            position: relative;
+            border: 2px solid #444;
+            background-color: #222;
+        }
+        .tile {
+            position: absolute;
+            width: 128px;
+            height: 128px;
+            transform: scale(0.5) translate(-50%, -50%);
+            transform-origin: top left;
+        }
+        #botonera {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Mapa Isométrico de Mazmorra</h1>
-  <div id="visor"></div>
-  <div class="botones">
-    <button onclick="nivelAnterior()">← Anterior</button>
-    <button onclick="nivelSiguiente()">Siguiente →</button>
-  </div>
+    <h1>Generador de Mazmorras - Panterra</h1>
 
-  <script>
-    let niveles = [];
-    let actual = 0;
+    <div id="visor">
+        <!-- Aquí se cargan los tiles desde app.py -->
+        {% for tile in tiles %}
+            <img src="{{ url_for('static', filename='Tiles/' + tile.imagen) }}"
+                 class="tile"
+                 style="top: {{ tile.y }}px; left: {{ tile.x }}px;">
+        {% endfor %}
+    </div>
 
-    async function cargarNiveles() {
-      const res = await fetch('/niveles');
-      niveles = await res.json();
-      if (niveles.length > 0) cargar(niveles[actual]);
-    }
+    <div id="botonera">
+        <form method="get" action="/">
+            <button type="submit" name="nivel" value="{{ nivel_anterior }}">Anterior: Nivel {{ nivel_anterior }}</button>
+            <button type="submit" name="nivel" value="{{ nivel_siguiente }}">Siguiente: Nivel {{ nivel_siguiente }}</button>
+        </form>
+        <button id="exportar-imagen">Exportar como Imagen</button>
+    </div>
 
-    async function cargar(nombre) {
-      const res = await fetch('/nivel/' + nombre);
-      const datos = await res.json();
-      const visor = document.getElementById('visor');
-      visor.innerHTML = '';
-
-      if (datos.tiles) {
-        datos.tiles.forEach(tile => {
-          const img = document.createElement('img');
-          img.src = '/static/Tiles/' + tile.tipo + '.png';
-          img.className = 'tile';
-          img.style.left = (tile.x * 256) + 'px';
-          img.style.top = (tile.y * 128) + 'px';
-          visor.appendChild(img);
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        document.getElementById('exportar-imagen').addEventListener('click', function () {
+            const contenedor = document.getElementById('visor');
+            html2canvas(contenedor, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: null,
+                scale: 2
+            }).then(canvas => {
+                const enlace = document.createElement('a');
+                enlace.download = 'nivel.png';
+                enlace.href = canvas.toDataURL('image/png');
+                enlace.click();
+            });
         });
-      }
-    }
-
-    function nivelAnterior() {
-      if (actual > 0) {
-        actual--;
-        cargar(niveles[actual]);
-      }
-    }
-
-    function nivelSiguiente() {
-      if (actual < niveles.length - 1) {
-        actual++;
-        cargar(niveles[actual]);
-      }
-    }
-
-    cargarNiveles();
-  </script>
+    </script>
 </body>
 </html>
