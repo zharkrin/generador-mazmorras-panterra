@@ -32,21 +32,28 @@ def generar_nivel(nombre, tipo='normal'):
                 tile["jefe"] = True
                 tile["circulo_magico"] = True
 
-            elif tipo == 'campamento' and x == centro_x and y == centro_y:
-                tile["tipo"] = "Campamento"
-                tile["campamento"] = True
+            elif tipo == 'campamento':
+                if x == centro_x and y == centro_y:
+                    tile["tipo"] = "Plaza"
+                    tile["campamento"] = True
+                    tile["pueblo"] = True
+                elif abs(x - centro_x) <= 1 and abs(y - centro_y) <= 1:
+                    # Añadir edificios del pueblo alrededor de la plaza
+                    opciones = ['Casa', 'Tienda', 'Sanador', 'Herrero', 'Taberna']
+                    tile["tipo"] = random.choice(opciones)
+                    tile["pueblo"] = True
 
             nivel["tiles"].append(tile)
 
     with open(os.path.join(CARPETA, f"{nombre}.json"), 'w') as archivo:
         json.dump(nivel, archivo, indent=2)
 
-# Generación de niveles
+# Generar niveles
 for i in range(1, NUMERO_NIVELES + 1):
-    generar_nivel(f"nivel-{i}")
+    generar_nivel(f"nivel-{i}")  # Normal
 
     if i % 10 == 0:
-        generar_nivel(f"nivel-{i}", tipo='jefe')
-        generar_nivel(f"nivel-{i}.5", tipo='campamento')
+        generar_nivel(f"nivel-{i}", tipo='jefe')        # Nivel de jefe
+        generar_nivel(f"nivel-{i}.5", tipo='campamento') # Pueblo / campamento
 
-print(f"{NUMERO_NIVELES} niveles generados con jefes y campamentos intermedios.")
+print(f"Se generaron {NUMERO_NIVELES} niveles con jefes y pueblos.")
