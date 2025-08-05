@@ -5,13 +5,13 @@ import random
 # Configuración
 TIPOS_TILES = ['Bosque', 'Desierto', 'Lava', 'Nieve', 'Piedra']
 NUMERO_NIVELES = 30
-ANCHURA = 6  # número de tiles en x
-ALTURA = 6   # número de tiles en y
+ANCHURA = 6
+ALTURA = 6
 CARPETA = 'niveles'
 
 os.makedirs(CARPETA, exist_ok=True)
 
-for i in range(1, NUMERO_NIVELES + 1):
+def generar_nivel(nombre, tipo='normal'):
     nivel = {
         "tiles": []
     }
@@ -27,16 +27,26 @@ for i in range(1, NUMERO_NIVELES + 1):
                 "tipo": random.choice(TIPOS_TILES)
             }
 
-            # Si es un nivel de jefe (cada 10 niveles), coloca la sala en el centro
-            if i % 10 == 0 and x == centro_x and y == centro_y:
+            if tipo == 'jefe' and x == centro_x and y == centro_y:
                 tile["tipo"] = "Jefe"
                 tile["jefe"] = True
-                tile["circulo_magico"] = True  # Solo se activa tras el jefe
+                tile["circulo_magico"] = True
+
+            elif tipo == 'campamento' and x == centro_x and y == centro_y:
+                tile["tipo"] = "Campamento"
+                tile["campamento"] = True
 
             nivel["tiles"].append(tile)
 
-    nombre_archivo = os.path.join(CARPETA, f"nivel-{i}.json")
-    with open(nombre_archivo, 'w') as archivo:
+    with open(os.path.join(CARPETA, f"{nombre}.json"), 'w') as archivo:
         json.dump(nivel, archivo, indent=2)
 
-print(f"{NUMERO_NIVELES} niveles generados con jefes en los niveles 10, 20, 30...")
+# Generación de niveles
+for i in range(1, NUMERO_NIVELES + 1):
+    generar_nivel(f"nivel-{i}")
+
+    if i % 10 == 0:
+        generar_nivel(f"nivel-{i}", tipo='jefe')
+        generar_nivel(f"nivel-{i}.5", tipo='campamento')
+
+print(f"{NUMERO_NIVELES} niveles generados con jefes y campamentos intermedios.")
