@@ -1,41 +1,27 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, send_from_directory, jsonify
 import os
 import json
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 
-NIVELES_DIR = 'niveles'
-
+# Rutas básicas
 @app.route('/')
 def index():
-    niveles = sorted([f for f in os.listdir(NIVELES_DIR) if f.endswith('.json')])
-    if niveles:
-        nivel_actual = niveles[0]
-    else:
-        nivel_actual = None
-    return render_template('index.html', nivel=nivel_actual)
+    # Puedes pasar un nivel por defecto o listar niveles reales
+    return render_template("index.html", nivel="nivel-1")
 
-@app.route('/nivel/<nombre>')
-def cargar_nivel(nombre):
-    ruta = os.path.join(NIVELES_DIR, nombre)
-    if os.path.exists(ruta):
-        with open(ruta, 'r') as archivo:
-            datos = json.load(archivo)
-        return jsonify(datos)
-    return jsonify({"error": "Nivel no encontrado"}), 404
+@app.route('/niveles/<path:filename>')
+def niveles_static(filename):
+    # sirve archivos json de niveles si los quieres desde /niveles/...
+    return send_from_directory('niveles', filename)
 
-@app.route('/niveles')
-def listar_niveles():
-    niveles = sorted([f for f in os.listdir(NIVELES_DIR) if f.endswith('.json')])
-    return jsonify(niveles)
+# Endpoint opcional para listar niveles (json)
+@app.route('/api/niveles')
+def api_niveles():
+    if not os.path.exists('niveles'):
+        return jsonify([])
+    files = sorted([f for f in os.listdir('niveles') if f.endswith('.json')])
+    return jsonify(files)
 
-@app.route('/guardar', methods=['POST'])
-def guardar():
-    datos = request.json
-    nombre = datos.get('nombre')
-    contenido = datos.get('contenido')
-    if not nombre or not contenido:
-        return jsonify({"error": "Faltan datos"}), 400
-    with open(os.path.join(NIVELES_DIR, nombre), 'w') as archivo:
-        json.dump(contenido, archivo, indent=2)
-    return jsonify({"mensaje": "Guardado con éxito"})
+if __name__ == '__main__':
+    app.run(debug=True)
