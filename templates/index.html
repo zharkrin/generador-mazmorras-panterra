@@ -1,77 +1,29 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Generador de Mazmorras - Panterra</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #111;
-            color: #eee;
-            text-align: center;
-        }
-        #visor {
-            width: 1024px;
-            height: 768px;
-            margin: 0 auto;
-            position: relative;
-            border: 2px solid #444;
-            background-color: #222;
-        }
-        .tile {
-            position: absolute;
-            width: 128px;
-            height: 128px;
-            transform: scale(0.5) translate(-50%, -50%);
-            transform-origin: top left;
-        }
-        #botonera {
-            margin-top: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin: 5px;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generador — Visor Isométrico con Biomas (Local)</title>
+  <style>
+    body { background:#111; color:#eee; font-family:Arial, sans-serif; margin:0; padding:20px; text-align:center; }
+    #visor { width:1024px; height:768px; margin: 12px auto; position:relative; border:2px solid #333; background:#0b0b0b; overflow:hidden; }
+    .tile { position:absolute; width:512px; height:512px; pointer-events:none; image-rendering:pixelated; }
+    .controls { margin-top:10px; }
+    button { padding:8px 14px; margin:0 6px; cursor:pointer; }
+  </style>
 </head>
 <body>
-    <h1>Generador de Mazmorras - Panterra</h1>
+  <h1>Visor Isométrico — Biomas Locales</h1>
 
-    <div id="visor">
-        <!-- Aquí se cargan los tiles desde app.py -->
-        {% for tile in tiles %}
-            <img src="{{ url_for('static', filename='Tiles/' + tile.imagen) }}"
-                 class="tile"
-                 style="top: {{ tile.y }}px; left: {{ tile.x }}px;">
-        {% endfor %}
-    </div>
+  <!-- data-nivel se usa para indicar qué archivo de niveles cargar (niveles/nombre.json) -->
+  <div id="visor" data-nivel="{{ nivel }}"></div>
 
-    <div id="botonera">
-        <form method="get" action="/">
-            <button type="submit" name="nivel" value="{{ nivel_anterior }}">Anterior: Nivel {{ nivel_anterior }}</button>
-            <button type="submit" name="nivel" value="{{ nivel_siguiente }}">Siguiente: Nivel {{ nivel_siguiente }}</button>
-        </form>
-        <button id="exportar-imagen">Exportar como Imagen</button>
-    </div>
+  <div class="controls">
+    <button id="exportar-png">Exportar PNG</button>
+    <button id="recargar-biomas">Recargar Biomas</button>
+  </div>
 
-    <!-- html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script>
-        document.getElementById('exportar-imagen').addEventListener('click', function () {
-            const contenedor = document.getElementById('visor');
-            html2canvas(contenedor, {
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: null,
-                scale: 2
-            }).then(canvas => {
-                const enlace = document.createElement('a');
-                enlace.download = 'nivel.png';
-                enlace.href = canvas.toDataURL('image/png');
-                enlace.click();
-            });
-        });
-    </script>
+  <!-- Script principal (módulo ES6) -->
+  <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>
