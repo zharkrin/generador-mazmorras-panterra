@@ -2,103 +2,147 @@
 "use strict";
 
 /**
- * BiomasCruces - Lógica para combinar biomas de forma coherente.
+ * BiomasCruces (adaptado a biomes.json)
  *
- * - Depende de window.Biomas (inicializado previamente).
- * - Expone: init(), isCompatible(a,b), generarCruce(a,b,opts), sugerirCruces(a,opts), registerRule(fn)
+ * Requisitos previos:
+ *  - window.Biomas debe estar disponible e inicializado con await Biomas.init()
  *
- * Ejemplo: await Biomas.init(); BiomasCruces.init(); BiomasCruces.generarCruce("Pantano","Bosque");
+ * Rutas esperadas:
+ *  - /static/biomas/biomes.json
+ *
+ * Funcionalidad adicional:
+ *  - Reconoce aliases definidos en biomes.json (campo "aliases": ["Pantano","wetland",...])
+ *  - Construye índices normalizados desde Biomas.getTodos()
+ *  - Proporciona listarCrucesPosibles() que devuelve la lista completa de cruces plausibles
+ *
+ * Uso mínimo:
+ *   await Biomas.init();
+ *   await BiomasCruces.init();
+ *   const lista = BiomasCruces.listarCrucesPosibles();
  */
 
 window.BiomasCruces = (function () {
-  const DEFAULT_MIN_SCORE = 0.2;
-  const rules = []; // reglas personalizadas: fn(aKey,bKey) => {allow:boolean,name?,type?,effects?,desc?} | null
+  // --- Configurables ---
+  const DEFAULT_MIN_SCORE = 0.2;   // score mínimo para considerar compatible
+  const LISTA_TOP_DEFAULT = 6;     // para sugerirCruces
 
-  // Categories mapping; usa claves normalizadas (igual que Biomas._internal.normalizeKey)
-  const CATEGORIES = {
-    "marine": ["costero","acuatico"],
-    "hotdesert": ["calido","seco"],
-    "colddesert": ["frio","seco"],
-    "savanna": ["calido","semi-seco"],
-    "grassland": ["templado","semi-seco"],
-    "tropicalseasonalforest": ["calido","humedo","estacional"],
-    "temperatedeciduousforest": ["templado","humedo"],
-    "tropicalrainforest": ["calido","muy-humedo"],
-    "temperaterainforest": ["templado","muy-humedo"],
-    "taiga": ["frio","coniferas"],
-    "tundra": ["frio-extremo"],
-    "glacier": ["frio-extremo","helado"],
-    "wetland": ["humedo","estancado"]
-  };
+  // Reglas personalizadas (puedes registrar más con registerRule)
+  const rules = [];
 
-  // efectos por tipo de cruce
+  // Mapeos internos
+  let _byKey = new Map();        // key normalized -> bioma object
+  let _byId = new Map();         // id -> bioma object
+  let _allBiomas = [];           // array de biomas (del JSON)
+  let _categoryMap = {};         // key -> [categorias...]
+
+  // Efectos por tipo de cruce
   const EFFECTS = {
     "transition": { movement: 0.9, visibility: 0.95, hazard: 0.0, resource: 1.0 },
     "mixture":    { movement: 0.75, visibility: 0.8,  hazard: 0.05, resource: 1.15 },
     "extreme":    { movement: 0.5,  visibility: 0.6,  hazard: 0.2,  resource: 1.5 }
   };
 
-  function normalize(name) {
-    if (!name) return "";
-    return String(name).toLowerCase().normalize("NFKD").replace(/\s+/g, "").replace(/[^a-z0-9áéíóúñ]/g, "");
+  // Heurísticas de nombre por coincidencia de claves normalizadas
+  const NAME_HEURISTICS = [
+    { a: "wetland", b: "temperatedeciduousforest", name: "Bosque pantanoso", type: "mixture" },
+    { a: "wetland", b: "tropicalrainforest", name: "Pantano tropical", type: "mixture" },
+    { a: "marine", b: "hotdesert", name: "Costa con dunas", type: "transition" },
+    { a: "marine", b: "glacier", name: "Fiordo helado", type: "extreme" },
+    { a: "hotdesert", b: "glacier", name: null, type: "extreme" } // raro, se filtrará por compatibilidad
+  ];
+
+  // ----------------- utilidades -----------------
+  function normalize(s) {
+    if (!s && s !== 0) return "";
+    return String(s).toLowerCase().normalize("NFKD").replace(/\s+/g, "").replace(/[^a-z0-9áéíóúñ]/g, "");
   }
 
-  function getCategoryKeys() {
-    return Object.keys(CATEGORIES);
+  function safeGetName(b) {
+    if (!b) return "";
+    return b.nombre || b.name || ("bioma_" + (b.id || ""));
   }
 
-  function resolveKeyFromBioma(bioma) {
-    if (!bioma) return null;
-    // bioma puede ser id, nombre, objeto
-    if (typeof bioma === "number") {
-      const b = window.Biomas.getPorId(bioma);
-      if (!b) return null;
-      return normalize(b.name || b.nombre || b.file || b.id);
-    }
-    if (typeof bioma === "string") {
-      const found = window.Biomas.getPorNombre(bioma);
-      if (found) return normalize(found.name || found.nombre || found.file || found.id);
-      return normalize(bioma);
-    }
-    if (typeof bioma === "object") {
-      if (bioma.id) {
-        const b = window.Biomas.getPorId(bioma.id);
-        if (b) return normalize(b.name || b.nombre);
+  // ----------------- inicialización -----------------
+  function buildIndexes(biomasArray) {
+    _byKey = new Map();
+    _byId = new Map();
+    _allBiomas = Array.isArray(biomasArray) ? biomasArray : [];
+
+    for (const b of _allBiomas) {
+      const id = (typeof b.id !== "undefined") ? Number(b.id) : null;
+      const nameMain = normalize(b.name || b.nombre || b.file || id || "");
+      if (nameMain) _byKey.set(nameMain, b);
+      if (id !== null) _byId.set(id, b);
+
+      // aliases: cada entrada puede tener campo "aliases": ["Pantano","wetland"]
+      if (Array.isArray(b.aliases)) {
+        for (const a of b.aliases) {
+          const k = normalize(a);
+          if (k) _byKey.set(k, b);
+        }
       }
-      return normalize(bioma.name || bioma.nombre || bioma.file || bioma.id);
+
+      // registrar variantes obvias
+      if (b.name) _byKey.set(normalize(b.name), b);
+      if (b.nombre) _byKey.set(normalize(b.nombre), b);
+      if (b.file) _byKey.set(normalize(b.file.replace(/\.[^.]+$/, "")), b);
     }
-    return null;
+
+    // construir mapa de categorías si el JSON las incluye; si no, intentar inferir mínimamente
+    _categoryMap = {};
+    for (const b of _allBiomas) {
+      const key = normalize(b.name || b.nombre || b.file || b.id);
+      const cats = Array.isArray(b.categories) ? b.categories.slice() : inferCategoriesFromName(b);
+      _categoryMap[key] = cats;
+    }
   }
 
+  // Inferir categorías simples a partir del nombre (fallback)
+  function inferCategoriesFromName(b) {
+    const n = normalize(b.name || b.nombre || b.file || "");
+    const cats = [];
+    if (!n) return cats;
+    if (n.includes("marine") || n.includes("sea") || n.includes("ocean")) cats.push("costero","acuatico");
+    if (n.includes("desert")) cats.push("calido","seco");
+    if (n.includes("tropical") || n.includes("rainforest") || n.includes("selva")) cats.push("calido","muy-humedo");
+    if (n.includes("forest") || n.includes("bosque")) cats.push("templado","humedo");
+    if (n.includes("taiga") || n.includes("conifer")) cats.push("frio","coniferas");
+    if (n.includes("tundra") || n.includes("glacier")) cats.push("frio-extremo","helado");
+    if (n.includes("wet") || n.includes("pantano") || n.includes("swamp")) cats.push("humedo","estancado");
+    if (n.includes("savanna") || n.includes("grass")) cats.push("calido","semi-seco");
+    return cats;
+  }
+
+  // ----------------- compatibilidad -----------------
   function intersect(a,b) {
-    const set = new Set(b);
-    return a.filter(x => set.has(x));
+    const s = new Set(b || []);
+    return (a || []).filter(x => s.has(x));
   }
 
   function baseCompatibilityScore(keyA, keyB) {
-    const catA = CATEGORIES[keyA] || [];
-    const catB = CATEGORIES[keyB] || [];
-    if (intersect(catA, catB).length > 0) return 0.9; // comparten etiquetas
-    // complementarios sencillos
+    const catA = _categoryMap[keyA] || [];
+    const catB = _categoryMap[keyB] || [];
+    if (intersect(catA, catB).length > 0) return 0.9;
+    // reglas complementarias básicas
     const complementary = (catA.includes("costero") && catB.includes("calido")) ||
                           (catB.includes("costero") && catA.includes("calido")) ||
                           (catA.includes("muy-humedo") && catB.includes("humedo")) ||
                           (catB.includes("muy-humedo") && catA.includes("humedo"));
     if (complementary) return 0.7;
-    // conflicto extremo
+    // extremo vs caliente -> conflictivo
     if ((catA.includes("frio-extremo") && catB.includes("calido")) ||
         (catB.includes("frio-extremo") && catA.includes("calido"))) return 0.05;
     return 0.4;
   }
 
+  // Exponer compatibilidad con scoring
   function isCompatible(a, b) {
-    if (!window.Biomas) throw new Error("Biomas no inicializado");
-    const aKey = resolveKeyFromBioma(a);
-    const bKey = resolveKeyFromBioma(b);
+    const aKey = resolveKeyFromInput(a);
+    const bKey = resolveKeyFromInput(b);
     if (!aKey || !bKey) return { compatible: false, score: 0, reason: "bioma desconocido" };
     if (aKey === bKey) return { compatible: true, score: 1, reason: "mismo bioma" };
 
-    // reglas personalizadas
+    // reglas personalizadas:
     for (const r of rules) {
       try {
         const rr = r(aKey, bKey);
@@ -112,93 +156,165 @@ window.BiomasCruces = (function () {
     return { compatible: score >= DEFAULT_MIN_SCORE, score, reason: "evaluado" };
   }
 
+  // Resolver cualquier entrada (id, nombre, objeto) a la key normalizada usada internamente
+  function resolveKeyFromInput(x) {
+    if (x === null || typeof x === "undefined") return null;
+    // si es número: buscar por ID
+    if (typeof x === "number") {
+      const b = _byId.get(Number(x));
+      if (!b) return null;
+      return normalize(b.name || b.nombre || b.file || b.id);
+    }
+    if (typeof x === "string") {
+      const k = normalize(x);
+      if (_byKey.has(k)) return k; // alias o normalizado directo
+      // intentar buscar por nombre completo en Biomas
+      const found = window.Biomas ? window.Biomas.getPorNombre(x) : null;
+      if (found) return normalize(found.name || found.nombre || found.file || found.id);
+      // fallback: devolver normalized input
+      return k;
+    }
+    if (typeof x === "object") {
+      if (typeof x.id !== "undefined") {
+        const b = _byId.get(Number(x.id));
+        if (b) return normalize(b.name || b.nombre || b.file || b.id);
+      }
+      return normalize(x.name || x.nombre || x.file || x.id || "");
+    }
+    return null;
+  }
+
+  // ----------------- generar cruce -----------------
   function generarCruce(a, b, opts = {}) {
-    if (!window.Biomas) throw new Error("Biomas no inicializado");
-    const aKey = resolveKeyFromBioma(a);
-    const bKey = resolveKeyFromBioma(b);
+    const aKey = resolveKeyFromInput(a);
+    const bKey = resolveKeyFromInput(b);
     if (!aKey || !bKey) return null;
     if (aKey === bKey) {
-      return {
-        baseA: aKey, baseB: bKey,
-        nombre: (window.Biomas.getPorNombre && window.Biomas.getPorNombre(a)) ? (window.Biomas.getPorNombre(a).nombre || window.Biomas.getPorNombre(a).name) : aKey,
-        type: "transition", modifiers: EFFECTS.transition,
-        description: "Zona de transición dentro del mismo bioma."
-      };
+      // misma base -> transición ligera
+      const pretty = safeGetName(_byKey.get(aKey) || _byId.get(aKey));
+      return { baseA: aKey, baseB: bKey, nombre: pretty, type: "transition", modifiers: EFFECTS.transition, description: "Transición interna" };
     }
 
-    // reglas personalizadas (permitir/prohibir)
+    // aplicar reglas personalizadas primero
     for (const r of rules) {
       try {
         const rr = r(aKey, bKey);
         if (rr && typeof rr.allow !== "undefined") {
           if (!rr.allow) return null;
-          return {
-            baseA: aKey, baseB: bKey, nombre: rr.name || `${aKey}-${bKey}`, type: rr.type || "mixture",
-            modifiers: rr.effects || EFFECTS[rr.type] || EFFECTS.mixture,
-            description: rr.desc || "Cruce personalizado"
-          };
+          return { baseA: aKey, baseB: bKey, nombre: rr.name || `${aKey}-${bKey}`, type: rr.type || "mixture",
+                   modifiers: rr.effects || EFFECTS[rr.type] || EFFECTS.mixture, description: rr.desc || "Cruce personalizado" };
         }
       } catch (e) { console.warn("rule error", e); }
     }
 
-    // heurísticas sencillas (puedes ampliar)
-    const heuristics = [
-      { match: (x,y) => x.includes("wetland") && y.includes("temperatedeciduousforest"), name: "Bosque pantanoso", type: "mixture" },
-      { match: (x,y) => x.includes("wetland") && y.includes("tropicalrainforest"), name: "Pantano tropical", type: "mixture" },
-      { match: (x,y) => x.includes("hotdesert") && y.includes("glacier"), name: null, type: "extreme" }, // raro, se rechazará por compatibilidad
-      { match: (x,y) => x.includes("marine") && y.includes("hotdesert"), name: "Costa con dunas", type: "transition" },
-      { match: (x,y) => x.includes("marine") && y.includes("glacier"), name: "Fiordo helado", type: "extreme" }
-    ];
-    for (const h of heuristics) {
+    // heurísticas (nombres más humanos)
+    for (const h of NAME_HEURISTICS) {
       try {
-        if (h.match(aKey, bKey) || h.match(bKey, aKey)) {
-          // comprobar compatibilidad básica
+        if ((aKey.includes(h.a) && bKey.includes(h.b)) || (aKey.includes(h.b) && bKey.includes(h.a))) {
           const comp = isCompatible(aKey, bKey);
           if (!comp.compatible) return null;
-          const prettyA = (window.Biomas.getPorNombre && window.Biomas.getPorNombre(a)) ? (window.Biomas.getPorNombre(a).nombre || window.Biomas.getPorNombre(a).name) : aKey;
-          const prettyB = (window.Biomas.getPorNombre && window.Biomas.getPorNombre(b)) ? (window.Biomas.getPorNombre(b).nombre || window.Biomas.getPorNombre(b).name) : bKey;
-          const nombre = h.name || `${prettyA} / ${prettyB}`;
-          const type = h.type || "mixture";
-          return { baseA: aKey, baseB: bKey, nombre, type, modifiers: EFFECTS[type] || EFFECTS.mixture, description: "Cruce heurístico" };
+          const name = h.name || `${safeGetName(_byKey.get(aKey))} / ${safeGetName(_byKey.get(bKey))}`;
+          return { baseA: aKey, baseB: bKey, nombre: name, type: h.type || "mixture", modifiers: EFFECTS[h.type] || EFFECTS.mixture, description: "Cruce heurístico" };
         }
       } catch (e) {}
     }
 
-    // por defecto usar score
+    // compatibilidad básica
     const comp = isCompatible(aKey, bKey);
     if (!comp.compatible) return null;
-    const prettyA = (window.Biomas.getPorNombre && window.Biomas.getPorNombre(a)) ? (window.Biomas.getPorNombre(a).nombre || window.Biomas.getPorNombre(a).name) : aKey;
-    const prettyB = (window.Biomas.getPorNombre && window.Biomas.getPorNombre(b)) ? (window.Biomas.getPorNombre(b).nombre || window.Biomas.getPorNombre(b).name) : bKey;
+
+    const prettyA = safeGetName(_byKey.get(aKey)) || aKey;
+    const prettyB = safeGetName(_byKey.get(bKey)) || bKey;
     const type = comp.score > 0.8 ? "mixture" : (comp.score > 0.5 ? "transition" : "mixture");
     const nombre = `${prettyA} / ${prettyB}`;
     return { baseA: aKey, baseB: bKey, nombre, type, modifiers: EFFECTS[type] || EFFECTS.mixture, description: `Cruce generado (score ${comp.score.toFixed(2)})` };
   }
 
+  // ----------------- sugerencias y listado completo -----------------
   function sugerirCruces(bioma, opts = {}) {
-    if (!window.Biomas) throw new Error("Biomas no inicializado");
-    const topN = opts.topN || 6;
+    const topN = opts.topN || LISTA_TOP_DEFAULT;
     const minScore = (typeof opts.minScore === "number") ? opts.minScore : 0.25;
-    const key = resolveKeyFromBioma(bioma);
+    const key = resolveKeyFromInput(bioma);
     if (!key) return [];
-    const all = window.Biomas.getTodos();
-    const candidates = [];
-    for (const b of all) {
-      const otherKey = normalize(b.name || b.nombre || b.file || b.id);
-      if (otherKey === key) continue;
+    const results = [];
+    for (const other of _allBiomas) {
+      const otherKey = normalize(other.name || other.nombre || other.file || other.id);
+      if (!otherKey || otherKey === key) continue;
       const comp = isCompatible(key, otherKey);
-      if (comp.score >= minScore) candidates.push({biome: b, score: comp.score});
+      if (comp.score >= minScore) {
+        results.push({ other: other, score: comp.score });
+      }
     }
-    candidates.sort((a,b) => b.score - a.score);
-    return candidates.slice(0, topN);
+    results.sort((a,b) => b.score - a.score);
+    return results.slice(0, topN);
   }
 
-  function registerRule(fn) { if (typeof fn === "function") rules.push(fn); }
+  /**
+   * Devuelve LISTA COMPLETA de cruces plausibles entre todos los biomas.
+   * Opciones:
+   *  - minScore: filtrar por score mínimo (0..1)
+   *  - onlyNames: true => devuelve [{ aName, bName, score, suggestedName, type }] (más compacto)
+   */
+  function listarCrucesPosibles(opts = {}) {
+    const minScore = (typeof opts.minScore === "number") ? opts.minScore : 0.25;
+    const onlyNames = !!opts.onlyNames;
+    const out = [];
+    const n = _allBiomas.length;
+    // recorrer pares (i<j) para no duplicar
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const A = _allBiomas[i], B = _allBiomas[j];
+        const keyA = normalize(A.name || A.nombre || A.file || A.id);
+        const keyB = normalize(B.name || B.nombre || B.file || B.id);
+        const comp = isCompatible(keyA, keyB);
+        if (!comp.compatible || comp.score < minScore) continue;
+        const generated = generarCruce(keyA, keyB);
+        const entry = {
+          aId: A.id, aName: A.nombre || A.name, aKey: keyA,
+          bId: B.id, bName: B.nombre || B.name, bKey: keyB,
+          score: comp.score,
+          suggestedName: generated ? generated.nombre : `${A.nombre || A.name} / ${B.nombre || B.name}`,
+          type: generated ? generated.type : "mixture",
+          modifiers: generated ? generated.modifiers : EFFECTS.mixture,
+          description: generated ? generated.description : "Cruce genérico"
+        };
+        if (onlyNames) {
+          out.push({ aName: entry.aName, bName: entry.bName, score: entry.score, suggestedName: entry.suggestedName, type: entry.type });
+        } else {
+          out.push(entry);
+        }
+      }
+    }
+    // ordenar por score descendente
+    out.sort((x,y) => y.score - x.score);
+    return out;
+  }
 
-  // API
-  const API = { isCompatible, generarCruce, sugerirCruces, registerRule, _internal: {CATEGORIES, EFFECTS} };
+  // ----------------- registrar regla personalizada -----------------
+  function registerRule(fn) {
+    if (typeof fn === "function") rules.push(fn);
+  }
 
-  // CommonJS export potencial
+  // ----------------- init público -----------------
+  async function init() {
+    if (!window.Biomas) throw new Error("Biomas no está disponible. Llama a await Biomas.init() antes.");
+    // cargar lista desde Biomas
+    _allBiomas = window.Biomas.getTodos();
+    buildIndexes(_allBiomas);
+    return true;
+  }
+
+  // ----------------- export API -----------------
+  const API = {
+    init,
+    isCompatible,
+    generarCruce,
+    sugerirCruces,
+    listarCrucesPosibles,
+    registerRule,
+    _internal: { EFFECTS, NAME_HEURISTICS, _categoryMap: () => _categoryMap }
+  };
+
   if (typeof module !== "undefined" && module.exports) module.exports = API;
-
   return API;
 })();
