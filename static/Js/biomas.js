@@ -1,55 +1,126 @@
+// static/js/biomas.js
 "use strict";
 
 /**
- * Definición de biomas base para el generador de mazmorras.
- * Formato claro y fácilmente editable.
+ * Biomas module
+ * - Carga estática de /static/biomas/biomes.json
+ * - Expone funciones: init(), getPorId, getPorName, getTodos, buscarPorTexto, rutaImagen
+ *
+ * Requisitos:
+ * - Colocar biomes.json en /static/biomas/biomes.json
+ * - Si cargas desde Flask, usar <script src="{{ url_for('static', filename='js/biomas.js') }}"></script>
+ *
+ * Uso:
+ *   await Biomas.init(); // carga JSON
+ *   Biomas.getTodos();
+ *   Biomas.getPorId(3);
  */
 
-const Biomas = {
-    lista: [
-        { id: 0, nombre: "Marino", color: "#466eab", habitabilidad: 0 },
-        { id: 1, nombre: "Desierto cálido", color: "#fbe79f", habitabilidad: 4 },
-        { id: 2, nombre: "Desierto frío", color: "#b5b887", habitabilidad: 10 },
-        { id: 3, nombre: "Sabana", color: "#d2d082", habitabilidad: 22 },
-        { id: 4, nombre: "Pradera", color: "#c8d68f", habitabilidad: 30 },
-        { id: 5, nombre: "Bosque tropical estacional", color: "#b6d95d", habitabilidad: 50 },
-        { id: 6, nombre: "Bosque templado caducifolio", color: "#29bc56", habitabilidad: 100 },
-        { id: 7, nombre: "Selva tropical", color: "#7dcb35", habitabilidad: 80 },
-        { id: 8, nombre: "Bosque lluvioso templado", color: "#409c43", habitabilidad: 90 },
-        { id: 9, nombre: "Taiga", color: "#4b6b32", habitabilidad: 12 },
-        { id: 10, nombre: "Tundra", color: "#96784b", habitabilidad: 4 },
-        { id: 11, nombre: "Glaciar", color: "#d5e7eb", habitabilidad: 0 },
-        { id: 12, nombre: "Pantano", color: "#0b9131", habitabilidad: 12 }
-    ],
+window.Biomas = (function () {
+  const JSON_PATH = "/static/biomas/biomes.json"; // ruta al JSON
+  let _data = null;
+  let _byId = new Map();
+  let _byNormalized = new Map();
 
-    /**
-     * Devuelve un bioma por su ID.
-     * @param {number} id - ID del bioma.
-     * @returns {object} Bioma encontrado o null.
-     */
-    getPorId(id) {
-        return this.lista.find(b => b.id === id) || null;
-    },
+  function normalizeKey(s) {
+    if (!s) return "";
+    return String(s).toLowerCase().normalize("NFKD").replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  }
 
-    /**
-     * Devuelve un bioma aleatorio.
-     * @returns {object} Bioma aleatorio.
-     */
-    getAleatorio() {
-        const index = Math.floor(Math.random() * this.lista.length);
-        return this.lista[index];
-    },
-
-    /**
-     * Devuelve todos los biomas disponibles.
-     * @returns {array} Lista de biomas.
-     */
-    getTodos() {
-        return this.lista;
+  async function init(path) {
+    const p = path || JSON_PATH;
+    try {
+      const res = await fetch(p, {cache: "no-cache"});
+      if (!res.ok) throw new Error("No se pudo cargar biomes.json: " + res.status);
+      const json = await res.json();
+      _data = Array.isArray(json) ? json : [];
+      buildIndexes();
+      return _data;
+    } catch (err) {
+      console.error("Biomas.init error:", err);
+      _data = [];
+      _byId = new Map();
+      _byNormalized = new Map();
+      throw err;
     }
-};
+  }
 
-// Exportar para uso en Node.js o ES Modules
-if (typeof module !== "undefined") {
-    module.exports = Biomas;
-}
+  function buildIndexes() {
+    _byId = new Map();
+    _byNormalized = new Map();
+    _data.forEach(b => {
+      if (typeof b.id !== "undefined") _byId.set(Number(b.id), b);
+      const norm = normalizeKey(b.name || b.nombre || b.file || b.id);
+      _byNormalized.set(norm, b);
+      // also store alternative keys
+      if (b.name) _byNormalized.set(normalizeKey(b.name), b);
+      if (b.nombre) _byNormalized.set(normalizeKey(b.nombre), b);
+      if (b.file) _byNormalized.set(normalizeKey(b.file.replace(/\.[^.]+$/, "")), b);
+    });
+  }
+
+  function requireInit() {
+    if (!_data) throw new Error("Biomas no inicializado. Llama a await Biomas.init()");
+  }
+
+  function getTodos() {
+    requireInit();
+    return _data.slice();
+  }
+
+  function getPorId(id) {
+    requireInit();
+    return _byId.get(Number(id)) || null;
+  }
+
+  function getPorNombre(name) {
+    requireInit();
+    if (!name) return null;
+    const norm = normalizeKey(name);
+    return _byNormalized.get(norm) || null;
+  }
+
+  function buscarPorTexto(q) {
+    requireInit();
+    if (!q) return [];
+    const text = String(q).toLowerCase();
+    return _data.filter(b => (b.name && b.name.toLowerCase().includes(text)) || (b.nombre && b.nombre.toLowerCase().includes(text)));
+  }
+
+  /**
+   * Devuelve ruta de imagen para usar en el generador.
+   * - defaultFolder: ruta base (por defecto static/Tiles/biomas/)
+   * - si el bioma tiene campo `file`, lo usa.
+   */
+  function rutaImagen(bioma, options = {}) {
+    requireInit();
+    const base = options.base || "/static/Tiles/biomas/";
+    let b = null;
+    if (typeof bioma === "number") b = getPorId(bioma);
+    else if (typeof bioma === "string") b = getPorNombre(bioma) || getPorId(Number(bioma));
+    else if (typeof bioma === "object") b = bioma;
+    if (!b) return null;
+    if (b.file) return base + b.file;
+    // fallback: construir nombre normalizado desde name
+    const fallback = normalizeKey(b.name || b.nombre || ("bioma_" + b.id)) + ".png";
+    return base + fallback;
+  }
+
+  // Export API
+  const API = {
+    init,           // async init([path])
+    getTodos,
+    getPorId,
+    getPorNombre,
+    buscarPorTexto,
+    rutaImagen,
+    _internal: { normalizeKey }
+  };
+
+  // CommonJS / Node export (si corresponde)
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = API;
+  }
+
+  return API;
+})();
