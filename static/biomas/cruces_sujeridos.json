@@ -1,0 +1,122 @@
+[
+  {
+    "aId": 12, "aName": "Pantano",
+    "bId": 6, "bName": "Bosque templado caducifolio",
+    "suggestedName": "Bosque pantanoso",
+    "type": "mixture",
+    "score": 0.92,
+    "modifiers": { "movement": 0.75, "visibility": 0.8, "hazard": 0.05, "resource": 1.15 }
+  },
+  {
+    "aId": 12, "aName": "Pantano",
+    "bId": 7, "bName": "Selva tropical",
+    "suggestedName": "Pantano tropical",
+    "type": "mixture",
+    "score": 0.90,
+    "modifiers": { "movement": 0.75, "visibility": 0.8, "hazard": 0.05, "resource": 1.15 }
+  },
+  {
+    "aId": 0, "aName": "Marino",
+    "bId": 1, "bName": "Desierto cálido",
+    "suggestedName": "Costa con dunas",
+    "type": "transition",
+    "score": 0.78,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 0, "aName": "Marino",
+    "bId": 11, "bName": "Glaciar",
+    "suggestedName": "Fiordo helado",
+    "type": "extreme",
+    "score": 0.80,
+    "modifiers": { "movement": 0.5, "visibility": 0.6, "hazard": 0.2, "resource": 1.5 }
+  },
+  {
+    "aId": 9, "aName": "Taiga",
+    "bId": 10, "bName": "Tundra",
+    "suggestedName": "Taiga - Tundra",
+    "type": "transition",
+    "score": 0.86,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 4, "aName": "Pradera",
+    "bId": 3, "bName": "Sabana",
+    "suggestedName": "Pradera / Sabana",
+    "type": "transition",
+    "score": 0.80,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 6, "aName": "Bosque templado caducifolio",
+    "bId": 8, "bName": "Bosque lluvioso templado",
+    "suggestedName": "Bosque lluvioso - templado",
+    "type": "mixture",
+    "score": 0.88,
+    "modifiers": { "movement": 0.75, "visibility": 0.8, "hazard": 0.05, "resource": 1.15 }
+  },
+  {
+    "aId": 7, "aName": "Selva tropical",
+    "bId": 5, "bName": "Bosque tropical estacional",
+    "suggestedName": "Transición selva / bosque tropical",
+    "type": "mixture",
+    "score": 0.89,
+    "modifiers": { "movement": 0.75, "visibility": 0.8, "hazard": 0.05, "resource": 1.15 }
+  },
+  {
+    "aId": 1, "aName": "Desierto cálido",
+    "bId": 3, "bName": "Sabana",
+    "suggestedName": "Desierto - Sabana (límite árido)",
+    "type": "transition",
+    "score": 0.65,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 2, "aName": "Desierto frío",
+    "bId": 10, "bName": "Tundra",
+    "suggestedName": "Desierto frío / Tundra",
+    "type": "transition",
+    "score": 0.60,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 11, "aName": "Glaciar",
+    "bId": 10, "bName": "Tundra",
+    "suggestedName": "Margen glaciar - tundra",
+    "type": "transition",
+    "score": 0.72,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 0, "aName": "Marino",
+    "bId": 7, "bName": "Selva tropical",
+    "suggestedName": "Costa tropical / Manglar",
+    "type": "mixture",
+    "score": 0.80,
+    "modifiers": { "movement": 0.75, "visibility": 0.8, "hazard": 0.05, "resource": 1.15 }
+  },
+  {
+    "aId": 1, "aName": "Desierto cálido",
+    "bId": 0, "bName": "Marino",
+    "suggestedName": "Playa árida / Duna costera",
+    "type": "transition",
+    "score": 0.78,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  },
+  {
+    "aId": 5, "aName": "Bosque tropical estacional",
+    "bId": 12, "bName": "Pantano",
+    "suggestedName": "Bosque pantanoso estacional",
+    "type": "mixture",
+    "score": 0.88,
+    "modifiers": { "movement": 0.75, "visibility": 0.8, "hazard": 0.05, "resource": 1.15 }
+  },
+  {
+    "aId": 9, "aName": "Taiga",
+    "bId": 6, "bName": "Bosque templado caducifolio",
+    "suggestedName": "Límite taiga / bosque",
+    "type": "transition",
+    "score": 0.70,
+    "modifiers": { "movement": 0.9, "visibility": 0.95, "hazard": 0.0, "resource": 1.0 }
+  }
+]
