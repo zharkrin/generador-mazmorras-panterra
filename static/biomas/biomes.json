@@ -1,15 +1,132 @@
 [
-  { "id": 0,  "name": "Marine", "nombre": "Marino", "file": "marine.png", "color": "#466eab", "habitability": 0 },
-  { "id": 1,  "name": "Hot desert", "nombre": "Desierto cálido", "file": "hot_desert.png", "color": "#fbe79f", "habitability": 4 },
-  { "id": 2,  "name": "Cold desert", "nombre": "Desierto frío", "file": "cold_desert.png", "color": "#b5b887", "habitability": 10 },
-  { "id": 3,  "name": "Savanna", "nombre": "Sabana", "file": "savanna.png", "color": "#d2d082", "habitability": 22 },
-  { "id": 4,  "name": "Grassland", "nombre": "Pradera", "file": "grassland.png", "color": "#c8d68f", "habitability": 30 },
-  { "id": 5,  "name": "Tropical seasonal forest", "nombre": "Bosque tropical estacional", "file": "tropical_seasonal_forest.png", "color": "#b6d95d", "habitability": 50 },
-  { "id": 6,  "name": "Temperate deciduous forest", "nombre": "Bosque templado caducifolio", "file": "temperate_deciduous_forest.png", "color": "#29bc56", "habitability": 100 },
-  { "id": 7,  "name": "Tropical rainforest", "nombre": "Selva tropical", "file": "tropical_rainforest.png", "color": "#7dcb35", "habitability": 80 },
-  { "id": 8,  "name": "Temperate rainforest", "nombre": "Bosque lluvioso templado", "file": "temperate_rainforest.png", "color": "#409c43", "habitability": 90 },
-  { "id": 9,  "name": "Taiga", "nombre": "Taiga", "file": "taiga.png", "color": "#4b6b32", "habitability": 12 },
-  { "id": 10, "name": "Tundra", "nombre": "Tundra", "file": "tundra.png", "color": "#96784b", "habitability": 4 },
-  { "id": 11, "name": "Glacier", "nombre": "Glaciar", "file": "glacier.png", "color": "#d5e7eb", "habitability": 0 },
-  { "id": 12, "name": "Wetland", "nombre": "Pantano", "file": "wetland.png", "color": "#0b9131", "habitability": 12 }
+  {
+    "id": 0,
+    "name": "Marine",
+    "nombre": "Marino",
+    "file": "marine.png",
+    "color": "#466eab",
+    "habitability": 0,
+    "aliases": ["marino","marine","océano","ocean","sea"],
+    "categories": ["costero","acuatico"]
+  },
+  {
+    "id": 1,
+    "name": "Hot desert",
+    "nombre": "Desierto cálido",
+    "file": "hot_desert.png",
+    "color": "#fbe79f",
+    "habitability": 4,
+    "aliases": ["desierto caliente","desierto cálido","hotdesert","hot_desert","desert"],
+    "categories": ["calido","seco"]
+  },
+  {
+    "id": 2,
+    "name": "Cold desert",
+    "nombre": "Desierto frío",
+    "file": "cold_desert.png",
+    "color": "#b5b887",
+    "habitability": 10,
+    "aliases": ["desierto frío","colddesert","cold_desert","cold desert"],
+    "categories": ["frio","seco"]
+  },
+  {
+    "id": 3,
+    "name": "Savanna",
+    "nombre": "Sabana",
+    "file": "savanna.png",
+    "color": "#d2d082",
+    "habitability": 22,
+    "aliases": ["savanna","sabana","savana"],
+    "categories": ["calido","semi-seco"]
+  },
+  {
+    "id": 4,
+    "name": "Grassland",
+    "nombre": "Pradera",
+    "file": "grassland.png",
+    "color": "#c8d68f",
+    "habitability": 30,
+    "aliases": ["pradera","grassland","steppe"],
+    "categories": ["templado","semi-seco"]
+  },
+  {
+    "id": 5,
+    "name": "Tropical seasonal forest",
+    "nombre": "Bosque tropical estacional",
+    "file": "tropical_seasonal_forest.png",
+    "color": "#b6d95d",
+    "habitability": 50,
+    "aliases": ["bosque tropical estacional","tropicalseasonalforest","seasonalforest"],
+    "categories": ["calido","humedo","estacional"]
+  },
+  {
+    "id": 6,
+    "name": "Temperate deciduous forest",
+    "nombre": "Bosque templado caducifolio",
+    "file": "temperate_deciduous_forest.png",
+    "color": "#29bc56",
+    "habitability": 100,
+    "aliases": ["bosque caducifolio","temperatedeciduousforest","deciduous","bosque templado"],
+    "categories": ["templado","humedo"]
+  },
+  {
+    "id": 7,
+    "name": "Tropical rainforest",
+    "nombre": "Selva tropical",
+    "file": "tropical_rainforest.png",
+    "color": "#7dcb35",
+    "habitability": 80,
+    "aliases": ["selva","selva tropical","tropicalrainforest","rainforest"],
+    "categories": ["calido","muy-humedo"]
+  },
+  {
+    "id": 8,
+    "name": "Temperate rainforest",
+    "nombre": "Bosque lluvioso templado",
+    "file": "temperate_rainforest.png",
+    "color": "#409c43",
+    "habitability": 90,
+    "aliases": ["bosque lluvioso templado","temperaterainforest","temperate_rainforest"],
+    "categories": ["templado","muy-humedo"]
+  },
+  {
+    "id": 9,
+    "name": "Taiga",
+    "nombre": "Taiga",
+    "file": "taiga.png",
+    "color": "#4b6b32",
+    "habitability": 12,
+    "aliases": ["taiga","conifer","coniferous","bosque de coníferas"],
+    "categories": ["frio","coniferas"]
+  },
+  {
+    "id": 10,
+    "name": "Tundra",
+    "nombre": "Tundra",
+    "file": "tundra.png",
+    "color": "#96784b",
+    "habitability": 4,
+    "aliases": ["tundra"],
+    "categories": ["frio-extremo"]
+  },
+  {
+    "id": 11,
+    "name": "Glacier",
+    "nombre": "Glaciar",
+    "file": "glacier.png",
+    "color": "#d5e7eb",
+    "habitability": 0,
+    "aliases": ["glaciar","glacier","hielo"],
+    "categories": ["frio-extremo","helado"]
+  },
+  {
+    "id": 12,
+    "name": "Wetland",
+    "nombre": "Pantano",
+    "file": "wetland.png",
+    "color": "#0b9131",
+    "habitability": 12,
+    "aliases": ["pantano","wetland","swamp","humedal"],
+    "categories": ["humedo","estancado"]
+  }
 ]
